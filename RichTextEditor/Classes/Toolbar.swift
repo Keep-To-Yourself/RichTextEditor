@@ -18,7 +18,7 @@ public class Toolbar: UIView {
         self.configuration = configuration
         super.init(frame: .zero)
         
-        configureToolbar(with: configuration)
+        self.setConfiguration(configuration)
         
         layer.borderColor = UIColor.lightGray.cgColor
         layer.borderWidth = 0.5
@@ -65,7 +65,7 @@ public class Toolbar: UIView {
         ])
     }
     
-    public func configureToolbar(with configuration: ToolbarConfiguration) {
+    public func setConfiguration(_ configuration: ToolbarConfiguration) {
         self.configuration = configuration
         
         self.backgroundColor = configuration.backgroundColor
@@ -84,7 +84,7 @@ public class Toolbar: UIView {
         
         let toolbarHeight = configuration.height
         let finalY = endFrame.origin.y - toolbarHeight
-
+        
         UIView.animate(withDuration: duration) {
             self.frame.origin.y = finalY
         }
