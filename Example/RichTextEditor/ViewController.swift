@@ -7,18 +7,20 @@
 //
 
 import UIKit
+import RichTextEditor
 
 class ViewController: UIViewController {
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        let editorView = EditorView(frame: self.view.bounds)
+        view.addSubview(editorView)
+        
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
-
 }
-

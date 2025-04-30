@@ -1,0 +1,6 @@
+framework module RichTextEditor {
+  umbrella header "RichTextEditor-umbrella.h"
+
+  export *
+  module * { export * }
+}
