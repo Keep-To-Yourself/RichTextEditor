@@ -9,8 +9,10 @@
 /* Begin PBXBuildFile section */
 		71526FF714FF1EFA5CFA02C86291A7EE /* Pods-RichTextEditor_Tests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 531F18FE521ACCA55D3046FA854F0BC7 /* Pods-RichTextEditor_Tests-dummy.m */; };
 		786444CB4DEF85F41A6C5A9A2EB05E9D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		7CAAA3552DC116260044B488 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3542DC116260044B488 /* EditorView.swift */; };
-		7CAAA3572DC116310044B488 /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3562DC116310044B488 /* ToolbarView.swift */; };
+		7CAAA3552DC116260044B488 /* RichTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3542DC116260044B488 /* RichTextEditor.swift */; };
+		7CAAA3572DC116310044B488 /* Toolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3562DC116310044B488 /* Toolbar.swift */; };
+		7CB9FE0E2DC1B64C0013D1C3 /* ToolbarConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */; };
+		7CB9FE102DC1CA350013D1C3 /* TextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */; };
 		8661C691BD6D3019F799EFC3CBE39446 /* Pods-RichTextEditor_Example-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = C1A4CAD0B2174FF4185C950A51E8CFF6 /* Pods-RichTextEditor_Example-dummy.m */; };
 		9576625BDD56B8A730DED7D6B8D21885 /* Pods-RichTextEditor_Example-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = FDC05C9AAC43E88D7748D22B0EEAC3F9 /* Pods-RichTextEditor_Example-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9772DAABC37994EB1549AB6EE42DDA42 /* Pods-RichTextEditor_Tests-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = BB61479AD7432426F78C734CE926FC66 /* Pods-RichTextEditor_Tests-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -51,8 +53,10 @@
 		77FFFE82BB79D52522ABE7EC5CDABD91 /* Pods-RichTextEditor_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-RichTextEditor_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		79B76511D7576AFA923F4771D9481E7C /* Pods-RichTextEditor_Example-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-RichTextEditor_Example-acknowledgements.plist"; sourceTree = "<group>"; };
 		7BD0DF7F4369C260F6B0111A69530DD0 /* RichTextEditor-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "RichTextEditor-dummy.m"; sourceTree = "<group>"; };
-		7CAAA3542DC116260044B488 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditorView.swift; path = RichTextEditor/Classes/EditorView.swift; sourceTree = "<group>"; };
-		7CAAA3562DC116310044B488 /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolbarView.swift; path = RichTextEditor/Classes/ToolbarView.swift; sourceTree = "<group>"; };
+		7CAAA3542DC116260044B488 /* RichTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RichTextEditor.swift; path = RichTextEditor/Classes/RichTextEditor.swift; sourceTree = "<group>"; };
+		7CAAA3562DC116310044B488 /* Toolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Toolbar.swift; path = RichTextEditor/Classes/Toolbar.swift; sourceTree = "<group>"; };
+		7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolbarConfiguration.swift; path = RichTextEditor/Classes/ToolbarConfiguration.swift; sourceTree = "<group>"; };
+		7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextEditor.swift; path = RichTextEditor/Classes/TextEditor.swift; sourceTree = "<group>"; };
 		80A0CC515B2CF53E78C1E51797C9FB9D /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		90D2A08B4FA66626EBD073EE2A997CD4 /* Pods-RichTextEditor_Example.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-RichTextEditor_Example.modulemap"; sourceTree = "<group>"; };
 		91690407C686C1017F67DFD3B17D2F0B /* Pods-RichTextEditor_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-RichTextEditor_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
@@ -140,8 +144,10 @@
 			children = (
 				4E320F751BDD322D52DC9CDFCC25A3F6 /* Pod */,
 				B678427625D6B0719B8E27CCD2BC1383 /* Support Files */,
-				7CAAA3542DC116260044B488 /* EditorView.swift */,
-				7CAAA3562DC116310044B488 /* ToolbarView.swift */,
+				7CAAA3542DC116260044B488 /* RichTextEditor.swift */,
+				7CAAA3562DC116310044B488 /* Toolbar.swift */,
+				7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */,
+				7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */,
 			);
 			name = RichTextEditor;
 			path = ../..;
@@ -392,9 +398,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7CB9FE0E2DC1B64C0013D1C3 /* ToolbarConfiguration.swift in Sources */,
 				ADD805F28D6ACDB9087E92169686A053 /* RichTextEditor-dummy.m in Sources */,
-				7CAAA3552DC116260044B488 /* EditorView.swift in Sources */,
-				7CAAA3572DC116310044B488 /* ToolbarView.swift in Sources */,
+				7CB9FE102DC1CA350013D1C3 /* TextEditor.swift in Sources */,
+				7CAAA3552DC116260044B488 /* RichTextEditor.swift in Sources */,
+				7CAAA3572DC116310044B488 /* Toolbar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -434,7 +442,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = "Target Support Files/Pods-RichTextEditor_Example/Pods-RichTextEditor_Example-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MACH_O_TYPE = staticlib;
 				MODULEMAP_FILE = "Target Support Files/Pods-RichTextEditor_Example/Pods-RichTextEditor_Example.modulemap";
@@ -503,7 +511,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -531,7 +539,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = "Target Support Files/Pods-RichTextEditor_Tests/Pods-RichTextEditor_Tests-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MACH_O_TYPE = staticlib;
 				MODULEMAP_FILE = "Target Support Files/Pods-RichTextEditor_Tests/Pods-RichTextEditor_Tests.modulemap";
@@ -568,7 +576,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Target Support Files/RichTextEditor/RichTextEditor-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MODULEMAP_FILE = "Target Support Files/RichTextEditor/RichTextEditor.modulemap";
 				PRODUCT_BUNDLE_IDENTIFIER = cn.feishu.RichTextEditor;
@@ -606,7 +614,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "Target Support Files/RichTextEditor/RichTextEditor-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MODULEMAP_FILE = "Target Support Files/RichTextEditor/RichTextEditor.modulemap";
 				PRODUCT_BUNDLE_IDENTIFIER = cn.feishu.RichTextEditor;
@@ -642,7 +650,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = "Target Support Files/Pods-RichTextEditor_Example/Pods-RichTextEditor_Example-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MACH_O_TYPE = staticlib;
 				MODULEMAP_FILE = "Target Support Files/Pods-RichTextEditor_Example/Pods-RichTextEditor_Example.modulemap";
@@ -714,7 +722,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -744,7 +752,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = "Target Support Files/Pods-RichTextEditor_Tests/Pods-RichTextEditor_Tests-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MACH_O_TYPE = staticlib;
 				MODULEMAP_FILE = "Target Support Files/Pods-RichTextEditor_Tests/Pods-RichTextEditor_Tests.modulemap";

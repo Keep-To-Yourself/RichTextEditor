@@ -1,5 +1,5 @@
 //
-//  EditorView.swift
+//  RichTextEditor.swift
 //  RichTextEditor
 //
 //  Created by Dylan Deng on 2025/4/29.
@@ -7,28 +7,18 @@
 
 import UIKit
 
-public class EditorView: UIView {
+public class RichTextEditor: UIView {
     
-    private let textView: UITextView = {
-        let textView = UITextView()
+    private var textView: TextEditor!
+    public var onFocusChanged: ((Bool) -> Void)?
+
+    override public init(frame: CGRect) {
+        super.init(frame: frame)
+        textView = TextEditor(self)
         textView.translatesAutoresizingMaskIntoConstraints = false
         textView.font = UIFont.systemFont(ofSize: 16)
         textView.textColor = .black
         textView.backgroundColor = .white
-        return textView
-    }()
-
-    override public init(frame: CGRect) {
-        super.init(frame: frame)
-        setup()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setup()
-    }
-
-    private func setup() {
         addSubview(textView)
         NSLayoutConstraint.activate([
             textView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -36,5 +26,9 @@ public class EditorView: UIView {
             textView.topAnchor.constraint(equalTo: topAnchor),
             textView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 }

@@ -14,9 +14,10 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        let editorView = EditorView(frame: self.view.bounds)
-        view.addSubview(editorView)
+        let textEditor = RichTextEditor(frame: self.view.bounds)
+        view.addSubview(textEditor)
         
+        Toolbar.shared.show(view: self.view)
     }
     
     override func didReceiveMemoryWarning() {

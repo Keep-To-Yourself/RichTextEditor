@@ -1,6 +1,5 @@
 # RichTextEditor
 
-[![CI Status](https://img.shields.io/travis/30594690/RichTextEditor.svg?style=flat)](https://travis-ci.org/30594690/RichTextEditor)
 [![Version](https://img.shields.io/cocoapods/v/RichTextEditor.svg?style=flat)](https://cocoapods.org/pods/RichTextEditor)
 [![License](https://img.shields.io/cocoapods/l/RichTextEditor.svg?style=flat)](https://cocoapods.org/pods/RichTextEditor)
 [![Platform](https://img.shields.io/cocoapods/p/RichTextEditor.svg?style=flat)](https://cocoapods.org/pods/RichTextEditor)
