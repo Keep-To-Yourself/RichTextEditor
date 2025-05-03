@@ -13,14 +13,13 @@ public class RichTextEditor: UIView {
     private var configuration: RichTextEditorConfiguration
     public var onFocusChanged: ((Bool) -> Void)?
 
-    override public init(frame: CGRect) {
-        self.configuration = RichTextEditorConfiguration()
-        super.init(frame: frame)
+    public init(configuration: RichTextEditorConfiguration) {
+        self.configuration = configuration
+        super.init(frame: .zero)
+        self.translatesAutoresizingMaskIntoConstraints = false
         
         textView = TextEditor(self)
         textView.translatesAutoresizingMaskIntoConstraints = false
-        
-        self.setConfiguration(self.configuration)
         
         addSubview(textView)
         NSLayoutConstraint.activate([
