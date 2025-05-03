@@ -24,6 +24,10 @@ class TextEditor: UITextView {
             .unorderedList([
                 ListItem(content: [.paragraph([InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
                 ListItem(content: [.paragraph([InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])])
+            ]),
+            .orderedList([
+                ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
+                ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])])
             ])
         ])
         self.attributedText = doc.toAttributedString()
@@ -49,19 +53,34 @@ class TextEditor: UITextView {
         return result
     }
     
+    private func rectForTextRange(range: NSRange) -> CGRect? {
+        guard let start = position(from: beginningOfDocument, offset: range.location),
+              let end = position(from: start, offset: range.length),
+              let textRange = textRange(from: start, to: end) else { return nil }
+        
+        let rects = selectionRects(for: textRange).compactMap { $0 as? UITextSelectionRect }.map { $0.rect }
+        return rects.reduce(CGRect.null) { $0.union($1) }
+    }
+    
     private var blockquoteLayers: [Int: [CAShapeLayer]] = [:]
     
     // 标记需要更新布局
     override var text: String! {
-        didSet { updateDecorations() }
+        didSet {
+            updateBlockquoteStyle()
+            updateUnorderedListStyle()
+            updateOrderedListStyle()
+        }
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        updateDecorations() // 滚动时更新位置
+        updateBlockquoteStyle()
+        updateUnorderedListStyle()
+        updateOrderedListStyle()
     }
     
-    private func updateDecorations() {
+    private func updateBlockquoteStyle() {
         // 删除所有旧图层
         blockquoteLayers.values.flatMap { $0 }.forEach { $0.removeFromSuperlayer() }
         blockquoteLayers.removeAll()
@@ -84,11 +103,8 @@ class TextEditor: UITextView {
         // 为每个段落添加装饰
         for (index, range) in ranges.enumerated() {
             // 获取文本范围
-            guard let start = position(from: beginningOfDocument, offset: range.location),
-                  let end = position(from: start, offset: range.length),
-                  let textRange = textRange(from: start, to: end) else { continue }
-            let rects = selectionRects(for: textRange).compactMap { $0 as? UITextSelectionRect }.map { $0.rect }
-            let rect = rects.reduce(CGRect.null) { $0.union($1) }
+            let rect = rectForTextRange(range: range)
+            guard let rect = rect else { continue }
             
             // 创建装饰图层
             var layers: [CAShapeLayer] = []
@@ -115,13 +131,104 @@ class TextEditor: UITextView {
             lineLayer.path = linePath.cgPath
             lineLayer.fillColor = UIColor.systemGray2.cgColor
             layers.append(lineLayer)
-
+            
             // 添加到视图
             for layer in layers {
                 self.layer.insertSublayer(layer, at: 0)
             }
             
             blockquoteLayers[index] = layers
+        }
+    }
+    
+    private var unorderedListLayers: [CAShapeLayer] = []
+    
+    private func updateUnorderedListStyle() {
+        unorderedListLayers.forEach { $0.removeFromSuperlayer() }
+        unorderedListLayers.removeAll()
+        
+        // 获取所有 unordered list
+        guard let attributedText = self.attributedText else { return }
+        
+        var ranges = [NSRange]()
+        let fullRange = NSRange(location: 0, length: attributedText.length)
+        
+        attributedText.enumerateAttribute(
+            NSAttributedString.Key("unorderedList"),
+            in: fullRange,
+            options: []
+        ) { value, range, _ in
+            guard value != nil else { return }
+            ranges.append(range)
+        }
+        
+        for range in ranges {
+            let rect = rectForTextRange(range: range)
+            guard let rect = rect else { continue }
+            
+            // y 坐标为段落中线
+            let y = rect.midY
+            // 缩进位置
+            let x = textContainerInset.left + 10
+            
+            let layer = CAShapeLayer()
+            let circleRect = CGRect(x: x - 3, y: y - 3, width: 6, height: 6)
+            layer.path = UIBezierPath(ovalIn: circleRect).cgPath
+            layer.fillColor = UIColor.label.cgColor
+            self.layer.insertSublayer(layer, at: 0)
+            
+            unorderedListLayers.append(layer)
+        }
+    }
+    
+    private var orderedListLayers: [CALayer] = []
+    
+    private func updateOrderedListStyle() {
+        orderedListLayers.forEach { $0.removeFromSuperlayer() }
+        orderedListLayers.removeAll()
+        
+        // 获取所有 ordered list
+        guard let attributedText = self.attributedText else { return }
+        
+        var ranges = [NSRange]()
+        let fullRange = NSRange(location: 0, length: attributedText.length)
+        
+        attributedText.enumerateAttribute(
+            NSAttributedString.Key("orderedList"),
+            in: fullRange,
+            options: []
+        ) { value, range, _ in
+            guard value != nil else { return }
+            ranges.append(range)
+        }
+        
+        for range in ranges {
+            let rect = rectForTextRange(range: range)
+            guard let rect = rect else { continue }
+            
+            let number = attributedText.attribute(NSAttributedString.Key("orderedListIndex"), at: range.location, effectiveRange: nil)
+            guard let number = number as? Int else { continue }
+            
+            let label = UILabel()
+            label.text = "\(number). "
+            label.font = UIFont.systemFont(ofSize: 16)
+            label.sizeToFit()
+            let renderer = UIGraphicsImageRenderer(size: label.bounds.size)
+            let image = renderer.image { ctx in
+                label.layer.render(in: ctx.cgContext)
+            }
+            let attachment = CALayer()
+            attachment.contents = image.cgImage
+            attachment.frame = CGRect(
+                x: textContainerInset.left + 8,
+                y: rect.midY - label.bounds.height / 2,
+                width: label.bounds.width,
+                height: label.bounds.height
+            )
+            
+            self.layer.insertSublayer(attachment, at: 0)
+            
+            orderedListLayers.append(attachment)
         }
     }
 }

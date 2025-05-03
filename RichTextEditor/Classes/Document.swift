@@ -34,7 +34,7 @@ struct InlineTextFragment {
 extension InlineTextFragment {
     func toAttributedString() -> NSAttributedString {
         var traits: UIFontDescriptor.SymbolicTraits = []
-
+        
         if self.isBold {
             traits.insert(.traitBold)
         }
@@ -45,7 +45,7 @@ extension InlineTextFragment {
         if let descriptor = font.fontDescriptor.withSymbolicTraits(traits) {
             font = UIFont(descriptor: descriptor, size: 16)
         }
-
+        
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: textColor ?? UIColor.black,
@@ -54,8 +54,20 @@ extension InlineTextFragment {
         return NSAttributedString(string: text, attributes: attributes)
     }
 }
+
+extension ListItem {
+    func toAttributedString(level: Int) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        for block in content {
+            let attributedString = block.toAttributedString(level: level)
+            result.append(attributedString)
+        }
+        return result
+    }
+}
+
 extension Block {
-    func toAttributedString() -> NSAttributedString {
+    func toAttributedString(level: Int = 0) -> NSAttributedString {
         switch self {
         case .paragraph(let fragments):
             let result = NSMutableAttributedString()
@@ -105,10 +117,36 @@ extension Block {
             result.addAttribute(NSAttributedString.Key("blockquote"), value: true, range: NSRange(location: 0, length: result.length))
             return result
         case .unorderedList(let items):
-            // TODO: Implement
-            return NSAttributedString(string: "UL Test")
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.headIndent = CGFloat((level + 1) * 24)
+            paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
+            paragraphStyle.alignment = .left
+            let result = NSMutableAttributedString()
+            for item in items {
+                let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
+                attributedString.addAttribute(NSAttributedString.Key("unorderedList"), value: level + 1, range: NSRange(location: 0, length: attributedString.length))
+                attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                result.append(attributedString)
+                result.append(NSAttributedString(string: "\n"))
+            }
+            return result
         case .orderedList(let items):
-            return NSAttributedString(string: "OL Test")
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.headIndent = CGFloat((level + 1) * 24)
+            paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
+            paragraphStyle.alignment = .left
+            let result = NSMutableAttributedString()
+            var index = 1
+            for item in items {
+                let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
+                attributedString.addAttribute(NSAttributedString.Key("orderedList"), value: level + 1, range: NSRange(location: 0, length: attributedString.length))
+                attributedString.addAttribute(NSAttributedString.Key("orderedListIndex"), value: index, range: NSRange(location: 0, length: attributedString.length))
+                attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                result.append(attributedString)
+                result.append(NSAttributedString(string: "\n"))
+                index += 1
+            }
+            return result
         }
     }
 }
