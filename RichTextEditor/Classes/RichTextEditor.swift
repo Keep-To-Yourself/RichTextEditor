@@ -10,15 +10,17 @@ import UIKit
 public class RichTextEditor: UIView {
     
     private var textView: TextEditor!
+    private var configuration: RichTextEditorConfiguration
     public var onFocusChanged: ((Bool) -> Void)?
 
-    override public init(frame: CGRect) {
-        super.init(frame: frame)
+    public init(configuration: RichTextEditorConfiguration) {
+        self.configuration = configuration
+        super.init(frame: .zero)
+        self.translatesAutoresizingMaskIntoConstraints = false
+        
         textView = TextEditor(self)
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.font = UIFont.systemFont(ofSize: 16)
-        textView.textColor = .black
-        textView.backgroundColor = .white
+        
         addSubview(textView)
         NSLayoutConstraint.activate([
             textView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -30,5 +32,12 @@ public class RichTextEditor: UIView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public func setConfiguration(_ configuration: RichTextEditorConfiguration) {
+        self.configuration = configuration
+        textView.font = UIFont.systemFont(ofSize: configuration.fontSize)
+        textView.textColor = configuration.textColor
+        textView.backgroundColor = configuration.backgroundColor
     }
 }

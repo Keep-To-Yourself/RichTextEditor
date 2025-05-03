@@ -13,6 +13,8 @@
 		7CAAA3572DC116310044B488 /* Toolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3562DC116310044B488 /* Toolbar.swift */; };
 		7CB9FE0E2DC1B64C0013D1C3 /* ToolbarConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */; };
 		7CB9FE102DC1CA350013D1C3 /* TextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */; };
+		7CB9FE122DC248770013D1C3 /* RichTextEditorConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE112DC248770013D1C3 /* RichTextEditorConfiguration.swift */; };
+		7CB9FE162DC24C4F0013D1C3 /* Document.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE152DC24C4F0013D1C3 /* Document.swift */; };
 		8661C691BD6D3019F799EFC3CBE39446 /* Pods-RichTextEditor_Example-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = C1A4CAD0B2174FF4185C950A51E8CFF6 /* Pods-RichTextEditor_Example-dummy.m */; };
 		9576625BDD56B8A730DED7D6B8D21885 /* Pods-RichTextEditor_Example-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = FDC05C9AAC43E88D7748D22B0EEAC3F9 /* Pods-RichTextEditor_Example-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9772DAABC37994EB1549AB6EE42DDA42 /* Pods-RichTextEditor_Tests-umbrella.h in Headers */ = {isa = PBXBuildFile; fileRef = BB61479AD7432426F78C734CE926FC66 /* Pods-RichTextEditor_Tests-umbrella.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -57,6 +59,8 @@
 		7CAAA3562DC116310044B488 /* Toolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Toolbar.swift; path = RichTextEditor/Classes/Toolbar.swift; sourceTree = "<group>"; };
 		7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolbarConfiguration.swift; path = RichTextEditor/Classes/ToolbarConfiguration.swift; sourceTree = "<group>"; };
 		7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextEditor.swift; path = RichTextEditor/Classes/TextEditor.swift; sourceTree = "<group>"; };
+		7CB9FE112DC248770013D1C3 /* RichTextEditorConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RichTextEditorConfiguration.swift; path = RichTextEditor/Classes/RichTextEditorConfiguration.swift; sourceTree = "<group>"; };
+		7CB9FE152DC24C4F0013D1C3 /* Document.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Document.swift; path = RichTextEditor/Classes/Document.swift; sourceTree = "<group>"; };
 		80A0CC515B2CF53E78C1E51797C9FB9D /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		90D2A08B4FA66626EBD073EE2A997CD4 /* Pods-RichTextEditor_Example.modulemap */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.module; path = "Pods-RichTextEditor_Example.modulemap"; sourceTree = "<group>"; };
 		91690407C686C1017F67DFD3B17D2F0B /* Pods-RichTextEditor_Tests-acknowledgements.markdown */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = "Pods-RichTextEditor_Tests-acknowledgements.markdown"; sourceTree = "<group>"; };
@@ -148,6 +152,8 @@
 				7CAAA3562DC116310044B488 /* Toolbar.swift */,
 				7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */,
 				7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */,
+				7CB9FE112DC248770013D1C3 /* RichTextEditorConfiguration.swift */,
+				7CB9FE152DC24C4F0013D1C3 /* Document.swift */,
 			);
 			name = RichTextEditor;
 			path = ../..;
@@ -400,8 +406,10 @@
 			files = (
 				7CB9FE0E2DC1B64C0013D1C3 /* ToolbarConfiguration.swift in Sources */,
 				ADD805F28D6ACDB9087E92169686A053 /* RichTextEditor-dummy.m in Sources */,
+				7CB9FE122DC248770013D1C3 /* RichTextEditorConfiguration.swift in Sources */,
 				7CB9FE102DC1CA350013D1C3 /* TextEditor.swift in Sources */,
 				7CAAA3552DC116260044B488 /* RichTextEditor.swift in Sources */,
+				7CB9FE162DC24C4F0013D1C3 /* Document.swift in Sources */,
 				7CAAA3572DC116310044B488 /* Toolbar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
