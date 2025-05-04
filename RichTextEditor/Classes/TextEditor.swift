@@ -27,7 +27,12 @@ class TextEditor: UITextView {
             ]),
             .orderedList([
                 ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])])
+                ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
+                ListItem(content: [.orderedList([
+                    ListItem(content: [
+                        .paragraph([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
+                    ])
+                ])])
             ])
         ])
         self.attributedText = doc.toAttributedString()
@@ -68,16 +73,14 @@ class TextEditor: UITextView {
     override var text: String! {
         didSet {
             updateBlockquoteStyle()
-            updateUnorderedListStyle()
-            updateOrderedListStyle()
+            updateListStyle()
         }
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
         updateBlockquoteStyle()
-        updateUnorderedListStyle()
-        updateOrderedListStyle()
+        updateListStyle()
     }
     
     private func updateBlockquoteStyle() {
@@ -141,51 +144,11 @@ class TextEditor: UITextView {
         }
     }
     
-    private var unorderedListLayers: [CAShapeLayer] = []
+    private var listLayers: [CALayer] = []
     
-    private func updateUnorderedListStyle() {
-        unorderedListLayers.forEach { $0.removeFromSuperlayer() }
-        unorderedListLayers.removeAll()
-        
-        // 获取所有 unordered list
-        guard let attributedText = self.attributedText else { return }
-        
-        var ranges = [NSRange]()
-        let fullRange = NSRange(location: 0, length: attributedText.length)
-        
-        attributedText.enumerateAttribute(
-            NSAttributedString.Key("unorderedList"),
-            in: fullRange,
-            options: []
-        ) { value, range, _ in
-            guard value != nil else { return }
-            ranges.append(range)
-        }
-        
-        for range in ranges {
-            let rect = rectForTextRange(range: range)
-            guard let rect = rect else { continue }
-            
-            // y 坐标为段落中线
-            let y = rect.midY
-            // 缩进位置
-            let x = textContainerInset.left + 10
-            
-            let layer = CAShapeLayer()
-            let circleRect = CGRect(x: x - 3, y: y - 3, width: 6, height: 6)
-            layer.path = UIBezierPath(ovalIn: circleRect).cgPath
-            layer.fillColor = UIColor.label.cgColor
-            self.layer.insertSublayer(layer, at: 0)
-            
-            unorderedListLayers.append(layer)
-        }
-    }
-    
-    private var orderedListLayers: [CALayer] = []
-    
-    private func updateOrderedListStyle() {
-        orderedListLayers.forEach { $0.removeFromSuperlayer() }
-        orderedListLayers.removeAll()
+    private func updateListStyle() {
+        listLayers.forEach { $0.removeFromSuperlayer() }
+        listLayers.removeAll()
         
         // 获取所有 ordered list
         guard let attributedText = self.attributedText else { return }
@@ -194,7 +157,7 @@ class TextEditor: UITextView {
         let fullRange = NSRange(location: 0, length: attributedText.length)
         
         attributedText.enumerateAttribute(
-            NSAttributedString.Key("orderedList"),
+            NSAttributedString.Key("listLevel"),
             in: fullRange,
             options: []
         ) { value, range, _ in
@@ -203,14 +166,20 @@ class TextEditor: UITextView {
         }
         
         for range in ranges {
-            let rect = rectForTextRange(range: range)
+            let firstCharRange = NSRange(location: range.location, length: 1)
+            let rect = rectForTextRange(range: firstCharRange)
             guard let rect = rect else { continue }
             
-            let number = attributedText.attribute(NSAttributedString.Key("orderedListIndex"), at: range.location, effectiveRange: nil)
-            guard let number = number as? Int else { continue }
+            let level = attributedText.attribute(NSAttributedString.Key("listLevel"), at: range.location, effectiveRange: nil)
+            guard let level = level as? Int else { continue }
+            
+            let style = attributedText.attribute(NSAttributedString.Key("listStyle"), at: range.location, effectiveRange: nil)
+            guard let style = style as? String else { continue }
+            
+            let levelOffset = CGFloat(level) * 24
             
             let label = UILabel()
-            label.text = "\(number). "
+            label.text = style
             label.font = UIFont.systemFont(ofSize: 16)
             label.sizeToFit()
             let renderer = UIGraphicsImageRenderer(size: label.bounds.size)
@@ -220,7 +189,7 @@ class TextEditor: UITextView {
             let attachment = CALayer()
             attachment.contents = image.cgImage
             attachment.frame = CGRect(
-                x: textContainerInset.left + 8,
+                x: textContainerInset.left + 8 + levelOffset,
                 y: rect.midY - label.bounds.height / 2,
                 width: label.bounds.width,
                 height: label.bounds.height
@@ -228,7 +197,7 @@ class TextEditor: UITextView {
             
             self.layer.insertSublayer(attachment, at: 0)
             
-            orderedListLayers.append(attachment)
+            listLayers.append(attachment)
         }
     }
 }

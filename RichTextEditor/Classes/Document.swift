@@ -124,8 +124,12 @@ extension Block {
             let result = NSMutableAttributedString()
             for item in items {
                 let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
-                attributedString.addAttribute(NSAttributedString.Key("unorderedList"), value: level + 1, range: NSRange(location: 0, length: attributedString.length))
-                attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                let existingLevel = attributedString.attribute(NSAttributedString.Key("listLevel"), at: 0, effectiveRange: nil) as? Int
+                if existingLevel == nil {
+                    attributedString.addAttribute(NSAttributedString.Key("listLevel"), value: level, range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(NSAttributedString.Key("listStyle"), value: getUnorderedListStyle(level: level), range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                }
                 result.append(attributedString)
                 result.append(NSAttributedString(string: "\n"))
             }
@@ -136,17 +140,63 @@ extension Block {
             paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
             paragraphStyle.alignment = .left
             let result = NSMutableAttributedString()
-            var index = 1
-            for item in items {
+            for (index, item) in items.enumerated() {
                 let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
-                attributedString.addAttribute(NSAttributedString.Key("orderedList"), value: level + 1, range: NSRange(location: 0, length: attributedString.length))
-                attributedString.addAttribute(NSAttributedString.Key("orderedListIndex"), value: index, range: NSRange(location: 0, length: attributedString.length))
-                attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                // check if attribute is already exists
+                let existingLevel = attributedString.attribute(NSAttributedString.Key("listLevel"), at: 0, effectiveRange: nil) as? Int
+                if existingLevel == nil {
+                    attributedString.addAttribute(NSAttributedString.Key("listLevel"), value: level, range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(NSAttributedString.Key("listStyle"), value: getOrderedListStyle(level: level, index: index), range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                }
                 result.append(attributedString)
                 result.append(NSAttributedString(string: "\n"))
-                index += 1
             }
             return result
+        }
+        // TODO: Combine unordered and ordered list and use a common Key
+    }
+    
+    private func getUnorderedListStyle(level: Int) -> String {
+        switch level % 3 {
+        case 0:
+            return "• "
+        case 1:
+            return "◦ "
+        case 2:
+            return "▪ "
+        default:
+            return ""
+        }
+    }
+    
+    private func getOrderedListStyle(level: Int, index: Int) -> String {
+        switch level % 3 {
+        case 0:
+            return "\(index + 1). "
+        case 1:
+            let letters = "abcdefghijklmnopqrstuvwxyz"
+            let letterIndex = index % letters.count
+            let letter = letters[letters.index(letters.startIndex, offsetBy: letterIndex)]
+            return "\(letter). "
+        case 2:
+            let romanNumerals: [(Int, String)] = [
+                (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"),
+                (100, "c"), (90, "xc"), (50, "l"), (40, "xl"),
+                (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")
+            ]
+            
+            var result = ""
+            var number = index + 1
+            for (value, numeral) in romanNumerals {
+                while number >= value {
+                    result += numeral
+                    number -= value
+                }
+            }
+            return "\(result). "
+        default:
+            return ""
         }
     }
 }
