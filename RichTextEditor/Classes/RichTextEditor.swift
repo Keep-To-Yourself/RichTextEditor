@@ -12,7 +12,7 @@ public class RichTextEditor: UIView {
     private var textView: TextEditor!
     private var configuration: RichTextEditorConfiguration
     public var onFocusChanged: ((Bool) -> Void)?
-
+    
     public init(configuration: RichTextEditorConfiguration) {
         self.configuration = configuration
         super.init(frame: .zero)
@@ -29,7 +29,7 @@ public class RichTextEditor: UIView {
             textView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
-
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
