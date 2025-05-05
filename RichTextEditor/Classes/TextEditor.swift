@@ -16,16 +16,26 @@ class TextEditor: UITextView {
         super.init(frame: .zero, textContainer: nil)
         
         let doc = Document(blocks: [
-            .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)]),
-            .paragraph([InlineTextFragment(text: "正文内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-            .blockquote([
+            IdentifiedBlock(block: .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)])),
+            IdentifiedBlock(block: .paragraph([InlineTextFragment(text: "正文内容", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
+            IdentifiedBlock(block: .blockquote([
                 .paragraph([InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-            ]),
-            .unorderedList([
+            ])),
+            IdentifiedBlock(block: .unorderedList([
                 ListItem(content: [.paragraph([InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [.paragraph([InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])])
-            ]),
-            .orderedList([
+                ListItem(content: [.paragraph([InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
+                ListItem(content: [
+                    .unorderedList([
+                        ListItem(content: [
+                            .paragraph([InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)])
+                        ]),
+                        ListItem(content: [
+                            .paragraph([InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
+                        ])
+                    ])
+                ])
+            ])),
+            IdentifiedBlock(block: .orderedList([
                 ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
                 ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
                 ListItem(content: [.orderedList([
@@ -33,7 +43,7 @@ class TextEditor: UITextView {
                         .paragraph([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                     ])
                 ])])
-            ])
+            ]))
         ])
         self.attributedText = doc.toAttributedString()
     }

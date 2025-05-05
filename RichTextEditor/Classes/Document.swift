@@ -8,7 +8,12 @@
 import UIKit
 
 struct Document {
-    var blocks: [Block]
+    var blocks: [IdentifiedBlock]
+}
+
+struct IdentifiedBlock {
+    let id: UUID = UUID()
+    var block: Block
 }
 
 enum Block {
@@ -154,7 +159,6 @@ extension Block {
             }
             return result
         }
-        // TODO: Combine unordered and ordered list and use a common Key
     }
     
     private func getUnorderedListStyle(level: Int) -> String {
@@ -175,10 +179,17 @@ extension Block {
         case 0:
             return "\(index + 1). "
         case 1:
-            let letters = "abcdefghijklmnopqrstuvwxyz"
-            let letterIndex = index % letters.count
-            let letter = letters[letters.index(letters.startIndex, offsetBy: letterIndex)]
-            return "\(letter). "
+            let letters = Array("abcdefghijklmnopqrstuvwxyz")
+            var result = ""
+            var n = index
+
+            repeat {
+                let charIndex = n % 26
+                result = String(letters[charIndex]) + result
+                n = n / 26 - 1
+            } while n >= 0
+
+            return result + ". "
         case 2:
             let romanNumerals: [(Int, String)] = [
                 (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"),
@@ -205,7 +216,7 @@ extension Document {
     func toAttributedString() -> NSAttributedString {
         let result = NSMutableAttributedString()
         for block in blocks {
-            let attributedString = block.toAttributedString()
+            let attributedString = block.block.toAttributedString()
             result.append(attributedString)
             result.append(NSAttributedString(string: "\n"))
         }
