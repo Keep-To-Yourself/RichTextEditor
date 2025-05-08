@@ -7,8 +7,35 @@
 
 import UIKit
 
+extension NSAttributedString.Key {
+    static let blockquote = NSAttributedString.Key(rawValue: "blockquote")
+    static let listLevel = NSAttributedString.Key(rawValue: "listLevel")
+    static let listStyle = NSAttributedString.Key(rawValue: "listStyle")
+    static let blockID = NSAttributedString.Key(rawValue: "blockID")
+}
+
 struct Document {
-    var blocks: [Block]
+    var blocks: [IdentifiedBlock]
+}
+
+struct IdentifiedBlock {
+    let id: UUID
+    var block: Block
+    
+    init(){
+        self.id = UUID()
+        self.block = .paragraph([])
+    }
+    
+    init(block: Block) {
+        self.id = UUID()
+        self.block = block
+    }
+    
+    init(id: UUID, block: Block) {
+        self.id = id
+        self.block = block
+    }
 }
 
 enum Block {
@@ -114,7 +141,7 @@ extension Block {
                 let attributedFragment = NSAttributedString(string: attributedString.string, attributes: attributes)
                 result.append(attributedFragment)
             }
-            result.addAttribute(NSAttributedString.Key("blockquote"), value: true, range: NSRange(location: 0, length: result.length))
+            result.addAttribute(.blockquote, value: true, range: NSRange(location: 0, length: result.length))
             return result
         case .unorderedList(let items):
             let paragraphStyle = NSMutableParagraphStyle()
@@ -124,10 +151,10 @@ extension Block {
             let result = NSMutableAttributedString()
             for item in items {
                 let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
-                let existingLevel = attributedString.attribute(NSAttributedString.Key("listLevel"), at: 0, effectiveRange: nil) as? Int
+                let existingLevel = attributedString.attribute(.listLevel, at: 0, effectiveRange: nil) as? Int
                 if existingLevel == nil {
-                    attributedString.addAttribute(NSAttributedString.Key("listLevel"), value: level, range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(NSAttributedString.Key("listStyle"), value: getUnorderedListStyle(level: level), range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.listLevel, value: level, range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.listStyle, value: getUnorderedListStyle(level: level), range: NSRange(location: 0, length: attributedString.length))
                     attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
                 }
                 result.append(attributedString)
@@ -143,10 +170,10 @@ extension Block {
             for (index, item) in items.enumerated() {
                 let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
                 // check if attribute is already exists
-                let existingLevel = attributedString.attribute(NSAttributedString.Key("listLevel"), at: 0, effectiveRange: nil) as? Int
+                let existingLevel = attributedString.attribute(.listLevel, at: 0, effectiveRange: nil) as? Int
                 if existingLevel == nil {
-                    attributedString.addAttribute(NSAttributedString.Key("listLevel"), value: level, range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(NSAttributedString.Key("listStyle"), value: getOrderedListStyle(level: level, index: index), range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.listLevel, value: level, range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.listStyle, value: getOrderedListStyle(level: level, index: index), range: NSRange(location: 0, length: attributedString.length))
                     attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
                 }
                 result.append(attributedString)
@@ -154,7 +181,6 @@ extension Block {
             }
             return result
         }
-        // TODO: Combine unordered and ordered list and use a common Key
     }
     
     private func getUnorderedListStyle(level: Int) -> String {
@@ -175,10 +201,17 @@ extension Block {
         case 0:
             return "\(index + 1). "
         case 1:
-            let letters = "abcdefghijklmnopqrstuvwxyz"
-            let letterIndex = index % letters.count
-            let letter = letters[letters.index(letters.startIndex, offsetBy: letterIndex)]
-            return "\(letter). "
+            let letters = Array("abcdefghijklmnopqrstuvwxyz")
+            var result = ""
+            var n = index
+            
+            repeat {
+                let charIndex = n % 26
+                result = String(letters[charIndex]) + result
+                n = n / 26 - 1
+            } while n >= 0
+            
+            return result + ". "
         case 2:
             let romanNumerals: [(Int, String)] = [
                 (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"),
@@ -205,8 +238,10 @@ extension Document {
     func toAttributedString() -> NSAttributedString {
         let result = NSMutableAttributedString()
         for block in blocks {
-            let attributedString = block.toAttributedString()
-            result.append(attributedString)
+            let attributedString = block.block.toAttributedString()
+            let mutableAttributedString = NSMutableAttributedString(attributedString: attributedString)
+            mutableAttributedString.addAttribute(.blockID, value: block.id, range: NSRange(location: 0, length: mutableAttributedString.length))
+            result.append(mutableAttributedString)
             result.append(NSAttributedString(string: "\n"))
         }
         return result

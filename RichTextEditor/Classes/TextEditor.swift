@@ -10,22 +10,32 @@ import UIKit
 class TextEditor: UITextView {
     
     private let editor: RichTextEditor
+    private let storage: DocumentTextStorage
     
     init(_ editor: RichTextEditor) {
         self.editor = editor
-        super.init(frame: .zero, textContainer: nil)
         
         let doc = Document(blocks: [
-            .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)]),
-            .paragraph([InlineTextFragment(text: "正文内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-            .blockquote([
+            IdentifiedBlock(block: .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)])),
+            IdentifiedBlock(block: .paragraph([InlineTextFragment(text: "正文内容", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
+            IdentifiedBlock(block: .blockquote([
                 .paragraph([InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-            ]),
-            .unorderedList([
+            ])),
+            IdentifiedBlock(block: .unorderedList([
                 ListItem(content: [.paragraph([InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [.paragraph([InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])])
-            ]),
-            .orderedList([
+                ListItem(content: [.paragraph([InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
+                ListItem(content: [
+                    .unorderedList([
+                        ListItem(content: [
+                            .paragraph([InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)])
+                        ]),
+                        ListItem(content: [
+                            .paragraph([InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
+                        ])
+                    ])
+                ])
+            ])),
+            IdentifiedBlock(block: .orderedList([
                 ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
                 ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
                 ListItem(content: [.orderedList([
@@ -33,9 +43,18 @@ class TextEditor: UITextView {
                         .paragraph([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                     ])
                 ])])
-            ])
+            ]))
         ])
-        self.attributedText = doc.toAttributedString()
+        self.storage = DocumentTextStorage(document: doc)
+        
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer()
+        textContainer.widthTracksTextView = true
+        self.storage.addLayoutManager(layoutManager)
+        layoutManager.addTextContainer(textContainer)
+        super.init(frame: .zero, textContainer: textContainer)
+        
+        self.storage.apply()
     }
     
     required init?(coder: NSCoder) {
@@ -95,7 +114,7 @@ class TextEditor: UITextView {
         let fullRange = NSRange(location: 0, length: attributedText.length)
         
         attributedText.enumerateAttribute(
-            NSAttributedString.Key("blockquote"),
+            .blockquote,
             in: fullRange,
             options: []
         ) { value, range, _ in
@@ -150,14 +169,14 @@ class TextEditor: UITextView {
         listLayers.forEach { $0.removeFromSuperlayer() }
         listLayers.removeAll()
         
-        // 获取所有 ordered list
+        // 获取所有 list
         guard let attributedText = self.attributedText else { return }
         
         var ranges = [NSRange]()
         let fullRange = NSRange(location: 0, length: attributedText.length)
         
         attributedText.enumerateAttribute(
-            NSAttributedString.Key("listLevel"),
+            .listLevel,
             in: fullRange,
             options: []
         ) { value, range, _ in
@@ -170,10 +189,12 @@ class TextEditor: UITextView {
             let rect = rectForTextRange(range: firstCharRange)
             guard let rect = rect else { continue }
             
-            let level = attributedText.attribute(NSAttributedString.Key("listLevel"), at: range.location, effectiveRange: nil)
+            // 列表等级
+            let level = attributedText.attribute(.listLevel, at: range.location, effectiveRange: nil)
             guard let level = level as? Int else { continue }
             
-            let style = attributedText.attribute(NSAttributedString.Key("listStyle"), at: range.location, effectiveRange: nil)
+            // 列表样式
+            let style = attributedText.attribute(.listStyle, at: range.location, effectiveRange: nil)
             guard let style = style as? String else { continue }
             
             let levelOffset = CGFloat(level) * 24
