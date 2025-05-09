@@ -42,12 +42,142 @@ enum Block {
     case paragraph([InlineTextFragment])
     case heading(level: Int, content: [InlineTextFragment])
     case blockquote([Block])
-    case unorderedList([ListItem])
-    case orderedList([ListItem])
+    case unorderedList(content: UnorderedList)
+    case orderedList(content: OrderedList)
 }
 
-struct ListItem {
-    var content: [Block]
+enum ListItem {
+    case text([InlineTextFragment])
+    case unorderedList(content: UnorderedList)
+    case orderedList(content: OrderedList)
+}
+
+class OrderedList {
+    var items: [ListItem]
+    
+    init(items: [ListItem]) {
+        self.items = items
+    }
+    
+    func toAttributedString(level: Int = 0) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        for (index, item) in items.enumerated() {
+            switch item {
+            case .text(let fragments):
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.headIndent = CGFloat((level + 1) * 24)
+                paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
+                paragraphStyle.alignment = .left
+                
+                for fragment in fragments {
+                    let attributedString = NSMutableAttributedString(attributedString: fragment.toAttributedString())
+                    
+                    attributedString.addAttribute(.listLevel, value: level, range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.listStyle, value: getOrderedListStyle(level: level, index: index), range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                    result.append(attributedString)
+                    result.append(NSAttributedString(string: "\n"))
+                }
+                break
+            case .unorderedList(let content):
+                result.append(content.toAttributedString(level: level + 1))
+                break
+            case .orderedList(let content):
+                result.append(content.toAttributedString(level: level + 1))
+                break
+            }
+        }
+        return result
+    }
+    
+    private func getOrderedListStyle(level: Int, index: Int) -> String {
+        switch level % 3 {
+        case 0:
+            return "\(index + 1). "
+        case 1:
+            let letters = Array("abcdefghijklmnopqrstuvwxyz")
+            var result = ""
+            var n = index
+            
+            repeat {
+                let charIndex = n % 26
+                result = String(letters[charIndex]) + result
+                n = n / 26 - 1
+            } while n >= 0
+            
+            return result + ". "
+        case 2:
+            let romanNumerals: [(Int, String)] = [
+                (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"),
+                (100, "c"), (90, "xc"), (50, "l"), (40, "xl"),
+                (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")
+            ]
+            
+            var result = ""
+            var number = index + 1
+            for (value, numeral) in romanNumerals {
+                while number >= value {
+                    result += numeral
+                    number -= value
+                }
+            }
+            return "\(result). "
+        default:
+            return ""
+        }
+    }
+}
+
+class UnorderedList {
+    var items: [ListItem]
+    
+    init(items: [ListItem]) {
+        self.items = items
+    }
+    
+    func toAttributedString(level: Int = 0) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        for item in items {
+            switch item {
+            case .text(let fragments):
+                let paragraphStyle = NSMutableParagraphStyle()
+                paragraphStyle.headIndent = CGFloat((level + 1) * 24)
+                paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
+                paragraphStyle.alignment = .left
+                
+                for fragment in fragments {
+                    let attributedString = NSMutableAttributedString(attributedString: fragment.toAttributedString())
+                    
+                    attributedString.addAttribute(.listLevel, value: level, range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.listStyle, value: getUnorderedListStyle(level: level), range: NSRange(location: 0, length: attributedString.length))
+                    attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
+                    result.append(attributedString)
+                    result.append(NSAttributedString(string: "\n"))
+                }
+                break
+            case .unorderedList(let content):
+                result.append(content.toAttributedString(level: level + 1))
+                break
+            case .orderedList(let content):
+                result.append(content.toAttributedString(level: level + 1))
+                break
+            }
+        }
+        return result
+    }
+    
+    private func getUnorderedListStyle(level: Int) -> String {
+        switch level % 3 {
+        case 0:
+            return "• "
+        case 1:
+            return "◦ "
+        case 2:
+            return "▪ "
+        default:
+            return ""
+        }
+    }
 }
 
 struct InlineTextFragment {
@@ -79,17 +209,6 @@ extension InlineTextFragment {
             .underlineStyle: isUnderline ? NSUnderlineStyle.styleSingle.rawValue : 0,
         ]
         return NSAttributedString(string: text, attributes: attributes)
-    }
-}
-
-extension ListItem {
-    func toAttributedString(level: Int) -> NSAttributedString {
-        let result = NSMutableAttributedString()
-        for block in content {
-            let attributedString = block.toAttributedString(level: level)
-            result.append(attributedString)
-        }
-        return result
     }
 }
 
@@ -146,95 +265,10 @@ extension Block {
             }
             result.addAttribute(.blockType, value: "blockquote", range: NSRange(location: 0, length: result.length))
             return result
-        case .unorderedList(let items):
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.headIndent = CGFloat((level + 1) * 24)
-            paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
-            paragraphStyle.alignment = .left
-            let result = NSMutableAttributedString()
-            for item in items {
-                let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
-                let existingLevel = attributedString.attribute(.listLevel, at: 0, effectiveRange: nil) as? Int
-                if existingLevel == nil {
-                    attributedString.addAttribute(.listLevel, value: level, range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(.listStyle, value: getUnorderedListStyle(level: level), range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
-                }
-                result.append(attributedString)
-                result.append(NSAttributedString(string: "\n"))
-            }
-            result.addAttribute(.blockType, value: "unorderedList", range: NSRange(location: 0, length: result.length))
-            return result
-        case .orderedList(let items):
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.headIndent = CGFloat((level + 1) * 24)
-            paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
-            paragraphStyle.alignment = .left
-            let result = NSMutableAttributedString()
-            for (index, item) in items.enumerated() {
-                let attributedString = NSMutableAttributedString(attributedString: item.toAttributedString(level: level + 1))
-                // check if attribute is already exists
-                let existingLevel = attributedString.attribute(.listLevel, at: 0, effectiveRange: nil) as? Int
-                if existingLevel == nil {
-                    attributedString.addAttribute(.listLevel, value: level, range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(.listStyle, value: getOrderedListStyle(level: level, index: index), range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
-                }
-                result.append(attributedString)
-                result.append(NSAttributedString(string: "\n"))
-            }
-            result.addAttribute(.blockType, value: "orderedList", range: NSRange(location: 0, length: result.length))
-            return result
-        }
-    }
-    
-    private func getUnorderedListStyle(level: Int) -> String {
-        switch level % 3 {
-        case 0:
-            return "• "
-        case 1:
-            return "◦ "
-        case 2:
-            return "▪ "
-        default:
-            return ""
-        }
-    }
-    
-    private func getOrderedListStyle(level: Int, index: Int) -> String {
-        switch level % 3 {
-        case 0:
-            return "\(index + 1). "
-        case 1:
-            let letters = Array("abcdefghijklmnopqrstuvwxyz")
-            var result = ""
-            var n = index
-            
-            repeat {
-                let charIndex = n % 26
-                result = String(letters[charIndex]) + result
-                n = n / 26 - 1
-            } while n >= 0
-            
-            return result + ". "
-        case 2:
-            let romanNumerals: [(Int, String)] = [
-                (1000, "m"), (900, "cm"), (500, "d"), (400, "cd"),
-                (100, "c"), (90, "xc"), (50, "l"), (40, "xl"),
-                (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")
-            ]
-            
-            var result = ""
-            var number = index + 1
-            for (value, numeral) in romanNumerals {
-                while number >= value {
-                    result += numeral
-                    number -= value
-                }
-            }
-            return "\(result). "
-        default:
-            return ""
+        case .unorderedList(let content):
+            return content.toAttributedString()
+        case .orderedList(let content):
+            return content.toAttributedString()
         }
     }
 }
