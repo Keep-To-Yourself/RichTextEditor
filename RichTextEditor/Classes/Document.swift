@@ -8,10 +8,10 @@
 import UIKit
 
 extension NSAttributedString.Key {
-    static let blockquote = NSAttributedString.Key(rawValue: "blockquote")
     static let listLevel = NSAttributedString.Key(rawValue: "listLevel")
     static let listStyle = NSAttributedString.Key(rawValue: "listStyle")
     static let blockID = NSAttributedString.Key(rawValue: "blockID")
+    static let blockType = NSAttributedString.Key(rawValue: "blockType")
 }
 
 struct Document {
@@ -102,6 +102,7 @@ extension Block {
                 let attributedString = fragment.toAttributedString()
                 result.append(attributedString)
             }
+            result.addAttribute(.blockType, value: "paragraph", range: NSRange(location: 0, length: result.length))
             return result
         case .heading(let level, let content):
             let fontSize: CGFloat = {
@@ -125,14 +126,16 @@ extension Block {
                 let attributedFragment = NSAttributedString(string: fragment.text, attributes: attributes)
                 result.append(attributedFragment)
             }
+            result.addAttribute(.blockType, value: "heading", range: NSRange(location: 0, length: result.length))
             return result
         case .blockquote(let blocks):
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.headIndent = 24
             paragraphStyle.firstLineHeadIndent = 24
-            paragraphStyle.paragraphSpacing = 8
+            paragraphStyle.paragraphSpacing = 4
             paragraphStyle.alignment = .left
             paragraphStyle.lineSpacing = 4
+            paragraphStyle.paragraphSpacingBefore = 4
             let result = NSMutableAttributedString()
             for block in blocks {
                 let attributedString = block.toAttributedString()
@@ -141,7 +144,7 @@ extension Block {
                 let attributedFragment = NSAttributedString(string: attributedString.string, attributes: attributes)
                 result.append(attributedFragment)
             }
-            result.addAttribute(.blockquote, value: true, range: NSRange(location: 0, length: result.length))
+            result.addAttribute(.blockType, value: "blockquote", range: NSRange(location: 0, length: result.length))
             return result
         case .unorderedList(let items):
             let paragraphStyle = NSMutableParagraphStyle()
@@ -160,6 +163,7 @@ extension Block {
                 result.append(attributedString)
                 result.append(NSAttributedString(string: "\n"))
             }
+            result.addAttribute(.blockType, value: "unorderedList", range: NSRange(location: 0, length: result.length))
             return result
         case .orderedList(let items):
             let paragraphStyle = NSMutableParagraphStyle()
@@ -179,6 +183,7 @@ extension Block {
                 result.append(attributedString)
                 result.append(NSAttributedString(string: "\n"))
             }
+            result.addAttribute(.blockType, value: "orderedList", range: NSRange(location: 0, length: result.length))
             return result
         }
     }

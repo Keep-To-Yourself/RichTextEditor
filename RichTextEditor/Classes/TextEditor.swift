@@ -108,17 +108,17 @@ class TextEditor: UITextView {
         blockquoteLayers.removeAll()
         
         // 获取所有 blockquote 范围
-        guard let attributedText = self.attributedText else { return }
+        let attributedText = self.storage.backingStore
         
         var ranges = [NSRange]()
         let fullRange = NSRange(location: 0, length: attributedText.length)
         
         attributedText.enumerateAttribute(
-            .blockquote,
+            .blockType,
             in: fullRange,
             options: []
         ) { value, range, _ in
-            guard value != nil else { return }
+            guard value as? String == "blockquote" else { return }
             ranges.append(range)
         }
         
@@ -135,11 +135,15 @@ class TextEditor: UITextView {
             let fullLineMaxX = bounds.width - textContainerInset.right - 3
             let fullLineWidth = fullLineMaxX - fullLineMinX
             
+            let padding: CGFloat = 2
+            let y = rect.minY + padding
+            let height = rect.height - padding * 2
+            
             // 背景矩形
             let fullLineRect = CGRect(x: fullLineMinX + 6,
-                                      y: rect.minY,
+                                      y: y,
                                       width: fullLineWidth,
-                                      height: rect.height)
+                                      height: height)
             let backgroundLayer = CAShapeLayer()
             let backgroundPath = UIBezierPath(rect: fullLineRect)
             backgroundLayer.path = backgroundPath.cgPath
@@ -148,7 +152,7 @@ class TextEditor: UITextView {
             
             // 竖线
             let lineLayer = CAShapeLayer()
-            let lineRect = CGRect(x: fullLineMinX, y: rect.minY, width: 6, height: rect.height)
+            let lineRect = CGRect(x: fullLineMinX, y: y, width: 6, height: height)
             let linePath = UIBezierPath(rect: lineRect)
             lineLayer.path = linePath.cgPath
             lineLayer.fillColor = UIColor.systemGray2.cgColor
@@ -170,7 +174,7 @@ class TextEditor: UITextView {
         listLayers.removeAll()
         
         // 获取所有 list
-        guard let attributedText = self.attributedText else { return }
+        let attributedText = self.storage
         
         var ranges = [NSRange]()
         let fullRange = NSRange(location: 0, length: attributedText.length)
