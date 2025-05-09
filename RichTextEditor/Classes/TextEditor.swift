@@ -21,29 +21,23 @@ class TextEditor: UITextView {
             IdentifiedBlock(block: .blockquote([
                 .paragraph([InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
             ])),
-            IdentifiedBlock(block: .unorderedList([
-                ListItem(content: [.paragraph([InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [.paragraph([InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [
-                    .unorderedList([
-                        ListItem(content: [
-                            .paragraph([InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)])
-                        ]),
-                        ListItem(content: [
-                            .paragraph([InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
-                        ])
-                    ])
-                ])
-            ])),
-            IdentifiedBlock(block: .orderedList([
-                ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [.paragraph([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])]),
-                ListItem(content: [.orderedList([
-                    ListItem(content: [
-                        .paragraph([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
-                    ])
-                ])])
-            ]))
+            IdentifiedBlock(block: .unorderedList(content: UnorderedList(items: [
+                .text([
+                    InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
+                ]),
+                .text([
+                    InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
+                ]),
+                .unorderedList(content: UnorderedList(items: [
+                    .text([InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)]),
+                    .text([InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
+                ]))
+            ]))),
+            IdentifiedBlock(block: .orderedList(content: OrderedList(items: [
+                .text([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
+            ])))
         ])
         self.storage = DocumentTextStorage(document: doc)
         
@@ -108,7 +102,7 @@ class TextEditor: UITextView {
         blockquoteLayers.removeAll()
         
         // 获取所有 blockquote 范围
-        let attributedText = self.storage.backingStore
+        let attributedText = self.storage
         
         var ranges = [NSRange]()
         let fullRange = NSRange(location: 0, length: attributedText.length)

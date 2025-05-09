@@ -8,7 +8,7 @@
 import UIKit
 
 class DocumentTextStorage: NSTextStorage {
-    public let backingStore = NSMutableAttributedString()
+    private let backingStore = NSMutableAttributedString()
     private var document: Document
     
     init(document: Document) {
@@ -77,8 +77,6 @@ class DocumentTextStorage: NSTextStorage {
         guard let blockID = blockID else { return }
         guard let blockType = blockType else { return }
         
-        guard let block = document.blocks.first(where: { $0.id == blockID }) else { return }
-        
         if delta >= 0 {
             // 插入或替换文本
             let blockString = attributedSubstring(from: blockRange)
@@ -110,11 +108,11 @@ class DocumentTextStorage: NSTextStorage {
         
         // TODO: Implement the logic to update the document block
         
-        // get the current text of the block by attribute blockID
+        // get the current text by attribute blockID
         enumerateAttribute(.blockID, in: NSRange(location: 0, length: length), options: []) { (value, range, stop) in
             if let blockID = value as? UUID, blockID == block.id {
                 let text = attributedSubstring(from: range)
-                print("Block ID: \(blockID), Content: \(text.string)")
+                print("Block ID: \(blockID), All Content: \(text.string)")
             }
         }
         
