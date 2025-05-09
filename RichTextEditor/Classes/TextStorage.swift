@@ -8,7 +8,7 @@
 import UIKit
 
 class DocumentTextStorage: NSTextStorage {
-    private let backingStore = NSMutableAttributedString()
+    public let backingStore = NSMutableAttributedString()
     private var document: Document
     
     init(document: Document) {
@@ -68,38 +68,55 @@ class DocumentTextStorage: NSTextStorage {
         guard range.location != NSNotFound && range.location > 0 else { return }
         
         var blockID: UUID?
+        var blockType: String?
         var blockRange = NSRange(location: NSNotFound, length: 0)
         if range.location < length {
             blockID = attribute(.blockID, at: range.location - 1, effectiveRange: &blockRange) as? UUID
+            blockType = attribute(.blockType, at: range.location - 1, effectiveRange: nil) as? String
         }
-        guard let id = blockID else {
-            return
-        }
+        guard let blockID = blockID else { return }
+        guard let blockType = blockType else { return }
+        
+        guard let block = document.blocks.first(where: { $0.id == blockID }) else { return }
         
         if delta >= 0 {
             // 插入或替换文本
             let blockString = attributedSubstring(from: blockRange)
-            print("Block ID: \(id), Content: \(blockString.string)")
+            print("Block ID: \(blockID), Content: \(blockString.string)")
             
             let addedString = attributedSubstring(from: range)
             print("Added String: \(addedString.string)")
             print("")
             
             // apply attributes to the new content
+            
             addAttributes([
-                .blockID: id,
+                .blockID: blockID,
+                .blockType: blockType
             ], range: editedRange)
+            
+            if addedString.string == "\n" {
+                // TODO: Process newline
+            }
         } else {
             // 删除文本
         }
         
-        updateDocumentBlock(with: id)
+        updateDocumentBlock(with: blockID)
     }
     
     private func updateDocumentBlock(with blockID: UUID) {
         guard let block = document.blocks.first(where: { $0.id == blockID }) else { return }
         
         // TODO: Implement the logic to update the document block
+        
+        // get the current text of the block by attribute blockID
+        enumerateAttribute(.blockID, in: NSRange(location: 0, length: length), options: []) { (value, range, stop) in
+            if let blockID = value as? UUID, blockID == block.id {
+                let text = attributedSubstring(from: range)
+                print("Block ID: \(blockID), Content: \(text.string)")
+            }
+        }
         
         switch block.block {
         case .paragraph:
