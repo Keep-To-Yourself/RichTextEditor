@@ -123,9 +123,7 @@ class DocumentTextStorage: NSTextStorage {
             break
         case .blockquote(let blocks):
             break
-        case .unorderedList(let items):
-            break
-        case .orderedList(let items):
+        case .list(let items):
             break
         }
     }

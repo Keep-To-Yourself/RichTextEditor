@@ -18,28 +18,31 @@ class TextEditor: UITextView {
         let doc = Document(blocks: [
             IdentifiedBlock(block: .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)])),
             IdentifiedBlock(block: .paragraph([InlineTextFragment(text: "正文内容", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
-            IdentifiedBlock(block: .blockquote([
-                .paragraph([InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-            ])),
-            IdentifiedBlock(block: .unorderedList(content: ListContent(items: [
+            IdentifiedBlock(block: .blockquote(content: BlockquoteContent(items: [
+                .text([InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .list(content: BlockquoteContent(items: [
+                    .text([InlineTextFragment(text: "引用+列表", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
+                ]))
+            ]))),
+            IdentifiedBlock(block: .list(content: ListContent(items: [
                 .text([
                     InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
                 ]),
                 .text([
                     InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
                 ]),
-                .unorderedList(content: ListContent(items: [
+                .list(content: ListContent(items: [
                     .text([InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)]),
                     .text([InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
             ]))),
-            IdentifiedBlock(block: .orderedList(content: ListContent(items: [
+            IdentifiedBlock(block: .list(content: ListContent(items: [
                 .text([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
                 .text([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-                .orderedList(content: ListContent(items: [
+                .list(content: ListContent(items: [
                     .text([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
-            ])))
+            ], ordered: true)))
         ])
         self.storage = DocumentTextStorage(document: doc)
         
@@ -82,8 +85,6 @@ class TextEditor: UITextView {
         return rects.reduce(CGRect.null) { $0.union($1) }
     }
     
-    private var blockquoteLayers: [Int: [CAShapeLayer]] = [:]
-    
     // 标记需要更新布局
     override var text: String! {
         didSet {
@@ -98,9 +99,11 @@ class TextEditor: UITextView {
         updateListStyle()
     }
     
+    private var blockquoteLayers: [CALayer] = []
+    
     private func updateBlockquoteStyle() {
         // 删除所有旧图层
-        blockquoteLayers.values.flatMap { $0 }.forEach { $0.removeFromSuperlayer() }
+        blockquoteLayers.forEach { $0.removeFromSuperlayer() }
         blockquoteLayers.removeAll()
         
         // 获取所有 blockquote 范围
@@ -119,7 +122,7 @@ class TextEditor: UITextView {
         }
         
         // 为每个段落添加装饰
-        for (index, range) in ranges.enumerated() {
+        for range in ranges {
             // 获取文本范围
             let rect = rectForTextRange(range: range)
             guard let rect = rect else { continue }
@@ -157,28 +160,11 @@ class TextEditor: UITextView {
             // 添加到视图
             for layer in layers {
                 self.layer.insertSublayer(layer, at: 0)
+                
+                blockquoteLayers.append(layer)
             }
             
-            blockquoteLayers[index] = layers
-        }
-    }
-    
-    private var listLayers: [CALayer] = []
-    
-    private func updateListStyle() {
-        listLayers.forEach { $0.removeFromSuperlayer() }
-        listLayers.removeAll()
-        
-        let attributedText = self.storage
-        
-        let fullRange = NSRange(location: 0, length: attributedText.length)
-        
-        attributedText.enumerateAttribute(
-            .blockType,
-            in: fullRange,
-            options: []
-        ) { value, range, _ in
-            guard value as? String == "unorderedList" else { return }
+            var index: [Int: Int] = [:]
             
             attributedText.enumerateAttribute(
                 .metadata,
@@ -191,8 +177,15 @@ class TextEditor: UITextView {
                 
                 guard let value = value as? [String: Any] else { return }
                 guard let level = value["level"] as? Int else { return }
+                guard let ordered = value["ordered"] as? Bool else { return }
                 
-                let style = getUnorderedListStyle(level: level)
+                if index[level] == nil {
+                    index[level] = 0
+                } else {
+                    index[level]! += 1
+                }
+                
+                let style = ordered ? getOrderedListStyle(level: level - 1, index: index[level]!) : getUnorderedListStyle(level: level - 1)
                 
                 let levelOffset = CGFloat(level) * 24
                 
@@ -213,19 +206,29 @@ class TextEditor: UITextView {
                     height: label.bounds.height
                 )
                 
-                self.layer.insertSublayer(attachment, at: 0)
+                self.layer.insertSublayer(attachment, at: 2)
                 
-                listLayers.append(attachment)
+                blockquoteLayers.append(attachment)
             }
         }
+    }
+    
+    private var listLayers: [CALayer] = []
+    
+    private func updateListStyle() {
+        listLayers.forEach { $0.removeFromSuperlayer() }
+        listLayers.removeAll()
+        
+        let attributedText = self.storage
+        
+        let fullRange = NSRange(location: 0, length: attributedText.length)
         
         attributedText.enumerateAttribute(
             .blockType,
             in: fullRange,
             options: []
         ) { value, range, _ in
-            guard value as? String == "orderedList" else { return }
-            
+            guard value as? String == "list" else { return }
             var index: [Int: Int] = [:]
             attributedText.enumerateAttribute(
                 .metadata,
@@ -238,14 +241,15 @@ class TextEditor: UITextView {
                 
                 guard let value = value as? [String: Any] else { return }
                 guard let level = value["level"] as? Int else { return }
+                guard let ordered = value["ordered"] as? Bool else { return }
                 
                 if index[level] == nil {
                     index[level] = 0
-                }else{
+                } else {
                     index[level]! += 1
                 }
                 
-                let style = getOrderedListStyle(level: level, index: index[level]!)
+                let style = ordered ? getOrderedListStyle(level: level, index: index[level]!) : getUnorderedListStyle(level: level)
                 
                 let levelOffset = CGFloat(level) * 24
                 
