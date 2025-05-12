@@ -7,6 +7,10 @@
 
 import UIKit
 
+extension NSNotification.Name {
+    static let shouldUpdateTypingAttribute = NSNotification.Name("shouldUpdateTypingAttribute")
+}
+
 class TextEditor: UITextView {
     
     private let editor: RichTextEditor
@@ -59,7 +63,7 @@ class TextEditor: UITextView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     override public func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         if result {

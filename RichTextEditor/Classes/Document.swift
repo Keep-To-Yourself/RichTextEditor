@@ -29,8 +29,12 @@ extension NSAttributedString.Key {
     static let metadata = NSAttributedString.Key(rawValue: "metadata")
 }
 
-struct Document {
+class Document {
     var blocks: [IdentifiedBlock]
+    
+    init(blocks: [IdentifiedBlock] = []) {
+        self.blocks = blocks
+    }
     
     func toAttributedString() -> NSAttributedString {
         let result = NSMutableAttributedString()
@@ -48,7 +52,7 @@ struct Document {
     }
 }
 
-struct IdentifiedBlock {
+class IdentifiedBlock {
     let id: UUID
     var block: Block
     
@@ -137,37 +141,34 @@ class BlockquoteContent {
     func toAttributedString(level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for (index, item) in items.enumerated() {
+            let str = NSMutableAttributedString()
             switch item {
             case .text(let fragments):
                 let paragraphStyle = NSMutableParagraphStyle()
                 paragraphStyle.headIndent = 24 + CGFloat(level * 24)
                 paragraphStyle.firstLineHeadIndent = 24 + CGFloat(level * 24)
-                paragraphStyle.paragraphSpacing = 4
                 paragraphStyle.alignment = .left
                 paragraphStyle.lineSpacing = 4
-                paragraphStyle.paragraphSpacingBefore = 4
                 
                 for fragment in fragments {
-                    let attributedString = NSMutableAttributedString(attributedString: fragment.toAttributedString())
-                    if level != 0 {
-                        let metadata: [String: Any] = [
-                            "level": level,
-                            "ordered": ordered,
-                        ]
-                        attributedString.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: attributedString.length))
-                    }
-                    attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
-                    result.append(attributedString)
+                    str.append(fragment.toAttributedString())
                 }
-                break
+                if level != 0 {
+                    let metadata: [String: Any] = [
+                        "level": level,
+                        "ordered": ordered,
+                    ]
+                    str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
+                }
+                str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
             case .list(let content):
-                result.append(content.toAttributedString(level: level + 1))
-                break
+                str.append(content.toAttributedString(level: level + 1))
             }
             if index != items.count - 1 {
                 let separator = NSAttributedString(string: "\n")
-                result.append(separator)
+                str.append(separator)
             }
+            result.append(str)
         }
         return result
     }
@@ -190,6 +191,7 @@ class ListContent {
     func toAttributedString(level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for (index, item) in items.enumerated() {
+            let str = NSMutableAttributedString()
             switch item {
             case .text(let fragments):
                 let paragraphStyle = NSMutableParagraphStyle()
@@ -198,35 +200,41 @@ class ListContent {
                 paragraphStyle.alignment = .left
                 
                 for fragment in fragments {
-                    let attributedString = NSMutableAttributedString(attributedString: fragment.toAttributedString())
-                    let metadata: [String: Any] = [
-                        "level": level,
-                        "ordered": ordered,
-                    ]
-                    attributedString.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: attributedString.length))
-                    attributedString.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedString.length))
-                    result.append(attributedString)
+                    str.append(fragment.toAttributedString())
                 }
-                break
+                let metadata: [String: Any] = [
+                    "level": level,
+                    "ordered": ordered,
+                ]
+                str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
+                str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
             case .list(let content):
-                result.append(content.toAttributedString(level: level + 1))
-                break
+                str.append(content.toAttributedString(level: level + 1))
             }
             if index != items.count - 1 {
                 let separator = NSAttributedString(string: "\n")
-                result.append(separator)
+                str.append(separator)
             }
+            result.append(str)
         }
         return result
     }
 }
 
-struct InlineTextFragment {
+class InlineTextFragment {
     var text: String
     var isBold: Bool
     var isItalic: Bool
     var isUnderline: Bool
     var textColor: UIColor?
+    
+    init(text: String, isBold: Bool = false, isItalic: Bool = false, isUnderline: Bool = false, textColor: UIColor? = nil) {
+        self.text = text
+        self.isBold = isBold
+        self.isItalic = isItalic
+        self.isUnderline = isUnderline
+        self.textColor = textColor
+    }
     
     func toAttributedString() -> NSAttributedString {
         var traits: UIFontDescriptor.SymbolicTraits = []

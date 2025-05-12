@@ -66,36 +66,44 @@ class DocumentTextStorage: NSTextStorage {
         print("range: \(range), delta: \(delta)")
         
         guard range.location != NSNotFound && range.location > 0 else { return }
+        // TODO: Create a new block (?) when range.location == 0
         
         var blockID: UUID?
         var blockType: String?
+        var metadata: [String: Any]?
         var blockRange = NSRange(location: NSNotFound, length: 0)
         if range.location < length {
             blockID = attribute(.blockID, at: range.location - 1, effectiveRange: &blockRange) as? UUID
             blockType = attribute(.blockType, at: range.location - 1, effectiveRange: nil) as? String
+            metadata = attribute(.metadata, at: range.location - 1, effectiveRange: nil) as? [String: Any]
         }
         guard let blockID = blockID else { return }
         guard let blockType = blockType else { return }
         
         if delta >= 0 {
             // 插入或替换文本
+            print("block range: \(blockRange)")
             let blockString = attributedSubstring(from: blockRange)
             print("Block ID: \(blockID), Content: \(blockString.string)")
             
             let addedString = attributedSubstring(from: range)
             print("Added String: \(addedString.string)")
-            print("")
             
             // apply attributes to the new content
             
-            addAttributes([
-                .blockID: blockID,
-                .blockType: blockType
-            ], range: editedRange)
-            
             if addedString.string == "\n" {
+                print("New Line")
                 // TODO: Process newline
+            }else{
+                addAttributes([
+                    .blockID: blockID,
+                    .blockType: blockType,
+                ], range: editedRange)
+                if metadata != nil {
+                    addAttributes([.metadata: metadata!], range: editedRange)
+                }
             }
+            
         } else {
             // 删除文本
         }
@@ -112,7 +120,7 @@ class DocumentTextStorage: NSTextStorage {
         enumerateAttribute(.blockID, in: NSRange(location: 0, length: length), options: []) { (value, range, stop) in
             if let blockID = value as? UUID, blockID == block.id {
                 let text = attributedSubstring(from: range)
-                print("Block ID: \(blockID), All Content: \(text.string)")
+                // print("Block ID: \(blockID), All Content: \(text.string)")
             }
         }
         
