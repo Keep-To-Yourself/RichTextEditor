@@ -63,7 +63,7 @@ class TextEditor: UITextView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-
+    
     override public func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         if result {
@@ -81,12 +81,25 @@ class TextEditor: UITextView {
     }
     
     private func rectForTextRange(range: NSRange) -> CGRect? {
-        guard let start = position(from: beginningOfDocument, offset: range.location),
-              let end = position(from: start, offset: range.length),
-              let textRange = textRange(from: start, to: end) else { return nil }
-        
-        let rects = selectionRects(for: textRange).compactMap { $0 as? UITextSelectionRect }.map { $0.rect }
-        return rects.reduce(CGRect.null) { $0.union($1) }
+        let glyphRange = self.layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        let rect = self.layoutManager.boundingRect(forGlyphRange: glyphRange, in: self.textContainer)
+        return CGRect(
+            x: rect.origin.x + textContainerInset.left,
+            y: rect.origin.y + textContainerInset.top,
+            width: rect.width,
+            height: rect.height
+        )
+    }
+    
+    private func rectForLine(range: NSRange) -> CGRect? {
+        let glyphRange = self.layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        let rect = self.layoutManager.lineFragmentRect(forGlyphAt: glyphRange.location, effectiveRange: nil)
+        return CGRect(
+            x: rect.origin.x + textContainerInset.left,
+            y: rect.origin.y + textContainerInset.top,
+            width: rect.width,
+            height: rect.height
+        )
     }
     
     // 标记需要更新布局
@@ -175,8 +188,7 @@ class TextEditor: UITextView {
                 in: range,
                 options: []
             ) { value, range, _ in
-                let firstCharRange = NSRange(location: range.location, length: 1)
-                let rect = rectForTextRange(range: firstCharRange)
+                let rect = rectForLine(range: range)
                 guard let rect = rect else { return }
                 
                 guard let value = value as? [String: Any] else { return }
@@ -239,8 +251,7 @@ class TextEditor: UITextView {
                 in: range,
                 options: []
             ) { value, range, _ in
-                let firstCharRange = NSRange(location: range.location, length: 1)
-                let rect = rectForTextRange(range: firstCharRange)
+                let rect = rectForLine(range: range)
                 guard let rect = rect else { return }
                 
                 guard let value = value as? [String: Any] else { return }

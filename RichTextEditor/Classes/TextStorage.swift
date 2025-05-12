@@ -92,18 +92,15 @@ class DocumentTextStorage: NSTextStorage {
             // apply attributes to the new content
             
             if addedString.string == "\n" {
-                print("New Line")
                 // TODO: Process newline
-            }else{
-                addAttributes([
-                    .blockID: blockID,
-                    .blockType: blockType,
-                ], range: editedRange)
-                if metadata != nil {
-                    addAttributes([.metadata: metadata!], range: editedRange)
-                }
             }
-            
+            addAttributes([
+                .blockID: blockID,
+                .blockType: blockType,
+            ], range: editedRange)
+            if metadata != nil {
+                addAttributes([.metadata: metadata!], range: editedRange)
+            }
         } else {
             // 删除文本
         }
