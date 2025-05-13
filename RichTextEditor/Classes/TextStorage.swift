@@ -63,39 +63,45 @@ class DocumentTextStorage: NSTextStorage {
         let range = self.editedRange
         // delta: 变化的长度
         let delta = self.changeInLength
-        print("range: \(range), delta: \(delta)")
+        // print("range: \(range), delta: \(delta)")
         
         guard range.location != NSNotFound && range.location > 0 else { return }
+        // TODO: Create a new block (?) when range.location == 0
         
         var blockID: UUID?
         var blockType: String?
+        var metadata: [String: Any]?
         var blockRange = NSRange(location: NSNotFound, length: 0)
         if range.location < length {
             blockID = attribute(.blockID, at: range.location - 1, effectiveRange: &blockRange) as? UUID
             blockType = attribute(.blockType, at: range.location - 1, effectiveRange: nil) as? String
+            metadata = attribute(.metadata, at: range.location - 1, effectiveRange: nil) as? [String: Any]
         }
         guard let blockID = blockID else { return }
         guard let blockType = blockType else { return }
         
         if delta >= 0 {
             // 插入或替换文本
+            // print("block range: \(blockRange)")
             let blockString = attributedSubstring(from: blockRange)
-            print("Block ID: \(blockID), Content: \(blockString.string)")
+            // print("Block ID: \(blockID), Content: \(blockString.string)")
             
             let addedString = attributedSubstring(from: range)
             print("Added String: \(addedString.string)")
-            print("")
             
             // apply attributes to the new content
             
-            addAttributes([
-                .blockID: blockID,
-                .blockType: blockType
-            ], range: editedRange)
-            
             if addedString.string == "\n" {
                 // TODO: Process newline
+                // Blockquote/List item: 回车：新item，新的metadata id Shift+回车：新行，旧的metadata id
             }
+            if metadata != nil {
+                addAttributes([.metadata: metadata!], range: editedRange)
+            }
+            addAttributes([
+                .blockID: blockID,
+                .blockType: blockType,
+            ], range: editedRange)
         } else {
             // 删除文本
         }
@@ -117,15 +123,13 @@ class DocumentTextStorage: NSTextStorage {
         }
         
         switch block.block {
-        case .paragraph:
+        case .paragraph(let content):
             break
         case .heading(let level, let content):
             break
-        case .blockquote(let blocks):
+        case .blockquote(let content):
             break
-        case .unorderedList(let items):
-            break
-        case .orderedList(let items):
+        case .list(let content):
             break
         }
     }
