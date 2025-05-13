@@ -52,11 +52,6 @@ class IdentifiedBlock {
     let id: UUID
     var block: Block
     
-    init(){
-        self.id = UUID()
-        self.block = .paragraph([])
-    }
-    
     init(block: Block) {
         self.id = UUID()
         self.block = block
@@ -69,7 +64,7 @@ class IdentifiedBlock {
 }
 
 enum Block {
-    case paragraph([InlineTextFragment])
+    case paragraph(content: [InlineTextFragment])
     case heading(level: Int, content: [InlineTextFragment])
     case blockquote(content: BlockquoteContent)
     case list(content: ListContent)
@@ -77,8 +72,8 @@ enum Block {
     func toAttributedString(level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         switch self {
-        case .paragraph(let fragments):
-            for fragment in fragments {
+        case .paragraph(let content):
+            for fragment in content {
                 let attributedString = fragment.toAttributedString()
                 result.append(attributedString)
             }
@@ -119,7 +114,7 @@ enum Block {
 }
 
 enum BlockquoteItem {
-    case text([InlineTextFragment])
+    case text(content: [InlineTextFragment])
     case list(content: BlockquoteContent)
 }
 
@@ -137,25 +132,27 @@ class BlockquoteContent {
         for item in items {
             let str = NSMutableAttributedString()
             switch item {
-            case .text(let fragments):
+            case .text(let content):
                 let paragraphStyle = NSMutableParagraphStyle()
                 paragraphStyle.headIndent = 24 + CGFloat(level * 24)
                 paragraphStyle.firstLineHeadIndent = 24 + CGFloat(level * 24)
                 paragraphStyle.alignment = .left
                 paragraphStyle.lineSpacing = 4
                 
-                for fragment in fragments {
+                for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
+                str.append(NSAttributedString(string: "\n"))
                 if level != 0 {
                     let metadata: [String: Any] = [
                         "level": level,
                         "ordered": ordered,
+                        "id": UUID(),
                     ]
                     str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 }
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
-                str.append(NSAttributedString(string: "\n"))
+//                str.append(NSAttributedString(string: "\n"))
             case .list(let content):
                 str.append(content.toAttributedString(level: level + 1))
             }
@@ -166,7 +163,7 @@ class BlockquoteContent {
 }
 
 enum ListItem {
-    case text([InlineTextFragment])
+    case text(content: [InlineTextFragment])
     case list(content: ListContent)
 }
 
@@ -184,22 +181,24 @@ class ListContent {
         for item in items {
             let str = NSMutableAttributedString()
             switch item {
-            case .text(let fragments):
+            case .text(let content):
                 let paragraphStyle = NSMutableParagraphStyle()
                 paragraphStyle.headIndent = CGFloat((level + 1) * 24)
                 paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
                 paragraphStyle.alignment = .left
                 
-                for fragment in fragments {
+                for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
+                str.append(NSAttributedString(string: "\n"))
                 let metadata: [String: Any] = [
                     "level": level,
                     "ordered": ordered,
+                    "id": UUID(),
                 ]
                 str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
-                str.append(NSAttributedString(string: "\n"))
+//                str.append(NSAttributedString(string: "\n"))
             case .list(let content):
                 str.append(content.toAttributedString(level: level + 1))
             }

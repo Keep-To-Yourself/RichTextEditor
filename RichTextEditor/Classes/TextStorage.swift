@@ -63,7 +63,7 @@ class DocumentTextStorage: NSTextStorage {
         let range = self.editedRange
         // delta: 变化的长度
         let delta = self.changeInLength
-        print("range: \(range), delta: \(delta)")
+        // print("range: \(range), delta: \(delta)")
         
         guard range.location != NSNotFound && range.location > 0 else { return }
         // TODO: Create a new block (?) when range.location == 0
@@ -82,9 +82,9 @@ class DocumentTextStorage: NSTextStorage {
         
         if delta >= 0 {
             // 插入或替换文本
-            print("block range: \(blockRange)")
+            // print("block range: \(blockRange)")
             let blockString = attributedSubstring(from: blockRange)
-            print("Block ID: \(blockID), Content: \(blockString.string)")
+            // print("Block ID: \(blockID), Content: \(blockString.string)")
             
             let addedString = attributedSubstring(from: range)
             print("Added String: \(addedString.string)")
@@ -93,14 +93,15 @@ class DocumentTextStorage: NSTextStorage {
             
             if addedString.string == "\n" {
                 // TODO: Process newline
+                // Blockquote/List item: 回车：新item，新的metadata id Shift+回车：新行，旧的metadata id
+            }
+            if metadata != nil {
+                addAttributes([.metadata: metadata!], range: editedRange)
             }
             addAttributes([
                 .blockID: blockID,
                 .blockType: blockType,
             ], range: editedRange)
-            if metadata != nil {
-                addAttributes([.metadata: metadata!], range: editedRange)
-            }
         } else {
             // 删除文本
         }
@@ -117,18 +118,18 @@ class DocumentTextStorage: NSTextStorage {
         enumerateAttribute(.blockID, in: NSRange(location: 0, length: length), options: []) { (value, range, stop) in
             if let blockID = value as? UUID, blockID == block.id {
                 let text = attributedSubstring(from: range)
-                // print("Block ID: \(blockID), All Content: \(text.string)")
+                print("Block ID: \(blockID), All Content: \(text.string)")
             }
         }
         
         switch block.block {
-        case .paragraph:
+        case .paragraph(let content):
             break
         case .heading(let level, let content):
             break
-        case .blockquote(let blocks):
+        case .blockquote(let content):
             break
-        case .list(let items):
+        case .list(let content):
             break
         }
     }

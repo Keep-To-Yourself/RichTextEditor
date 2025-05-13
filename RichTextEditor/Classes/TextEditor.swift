@@ -7,10 +7,6 @@
 
 import UIKit
 
-extension NSNotification.Name {
-    static let shouldUpdateTypingAttribute = NSNotification.Name("shouldUpdateTypingAttribute")
-}
-
 class TextEditor: UITextView {
     
     private let editor: RichTextEditor
@@ -21,30 +17,30 @@ class TextEditor: UITextView {
         
         let doc = Document(blocks: [
             IdentifiedBlock(block: .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)])),
-            IdentifiedBlock(block: .paragraph([InlineTextFragment(text: "正文内容", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
+            IdentifiedBlock(block: .paragraph(content: [InlineTextFragment(text: "正文内容", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
             IdentifiedBlock(block: .blockquote(content: BlockquoteContent(items: [
-                .text([InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text(content: [InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
                 .list(content: BlockquoteContent(items: [
-                    .text([InlineTextFragment(text: "引用+列表", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
+                    .text(content:[InlineTextFragment(text: "引用+列表", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
             ]))),
             IdentifiedBlock(block: .list(content: ListContent(items: [
-                .text([
+                .text(content:[
                     InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
                 ]),
-                .text([
+                .text(content:[
                     InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
                 ]),
                 .list(content: ListContent(items: [
-                    .text([InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)]),
-                    .text([InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
+                    .text(content:[InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)]),
+                    .text(content:[InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
             ]))),
             IdentifiedBlock(block: .list(content: ListContent(items: [
-                .text([InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-                .text([InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text(content:[InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text(content:[InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
                 .list(content: ListContent(items: [
-                    .text([InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
+                    .text(content:[InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
             ], ordered: true)))
         ])
@@ -258,10 +254,12 @@ class TextEditor: UITextView {
                 guard let level = value["level"] as? Int else { return }
                 guard let ordered = value["ordered"] as? Bool else { return }
                 
-                if index[level] == nil {
-                    index[level] = 0
-                } else {
-                    index[level]! += 1
+                if ordered {
+                    if index[level] == nil {
+                        index[level] = 0
+                    } else {
+                        index[level]! += 1
+                    }
                 }
                 
                 let style = ordered ? getOrderedListStyle(level: level, index: index[level]!) : getUnorderedListStyle(level: level)
