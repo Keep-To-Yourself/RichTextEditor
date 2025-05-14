@@ -16,29 +16,29 @@ class TextEditor: UITextView, UITextViewDelegate {
         self.editor = editor
         
         let doc = Document(blocks: [
-            IdentifiedBlock(block: .heading(level: 1, content: [InlineTextFragment(text: "标题", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)])),
-            IdentifiedBlock(block: .paragraph(content: [InlineTextFragment(text: "正文内容", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
+            IdentifiedBlock(block: .heading(level: 1, content: [InlineTextFragment(text: "标题\n", isBold: true, isItalic: false, isUnderline: false, textColor: .blue)])),
+            IdentifiedBlock(block: .paragraph(content: [InlineTextFragment(text: "正文内容\n", isBold: false, isItalic: true, isUnderline: true, textColor: nil)])),
             IdentifiedBlock(block: .blockquote(content: BlockquoteContent(items: [
-                .text(content: [InlineTextFragment(text: "引用内容", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text(content: [InlineTextFragment(text: "引用内容\n", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
                 .list(content: BlockquoteContent(items: [
-                    .text(content:[InlineTextFragment(text: "引用+列表", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
+                    .text(content:[InlineTextFragment(text: "引用+列表\n", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
             ]))),
             IdentifiedBlock(block: .list(content: ListContent(items: [
                 .text(content:[
-                    InlineTextFragment(text: "项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
+                    InlineTextFragment(text: "项目一\n", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
                 ]),
                 .text(content:[
-                    InlineTextFragment(text: "项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
+                    InlineTextFragment(text: "项目二\n", isBold: false, isItalic: false, isUnderline: false, textColor: nil)
                 ]),
                 .list(content: ListContent(items: [
-                    .text(content:[InlineTextFragment(text: "嵌套项目", isBold: false, isItalic: true, isUnderline: false, textColor: nil)]),
-                    .text(content:[InlineTextFragment(text: "嵌套项目2", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
+                    .text(content:[InlineTextFragment(text: "嵌套项目\n", isBold: false, isItalic: true, isUnderline: false, textColor: nil)]),
+                    .text(content:[InlineTextFragment(text: "嵌套项目2\n", isBold: true, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
             ]))),
             IdentifiedBlock(block: .list(content: ListContent(items: [
-                .text(content:[InlineTextFragment(text: "有序项目一", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
-                .text(content:[InlineTextFragment(text: "有序项目二", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text(content:[InlineTextFragment(text: "有序项目一\n", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
+                .text(content:[InlineTextFragment(text: "有序项目二\n", isBold: false, isItalic: false, isUnderline: false, textColor: nil)]),
                 .list(content: ListContent(items: [
                     .text(content:[InlineTextFragment(text: "嵌套有序\n项目", isBold: false, isItalic: false, isUnderline: false, textColor: nil)])
                 ]))
@@ -360,7 +360,6 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         if text == "\n" {
-            // TODO: 处理一个item内的换行
             // TODO: 处理多个换行
             // TODO: 处理range.location == 0的情况
             let prevAttribute = self.storage.attributes(at: range.location - 1, effectiveRange: nil)
@@ -369,8 +368,22 @@ class TextEditor: UITextView, UITextViewDelegate {
             let metadata = prevAttribute[.metadata] as? [String: Any]
             
             switch blockType {
-            case "blockquote":
+            case "heading":
+                // create a new paragraph block
                 fallthrough
+            case "paragraph":
+                // insert a new line
+                fallthrough
+            case "blockquote":
+                if metadata == nil {
+                    self.storage.insert(NSAttributedString(string: "\n", attributes: prevAttribute), at: range.location)
+                    // move cursor to the next line
+                    self.selectedRange = NSRange(location: range.location + 1, length: 0)
+                    // TODO:
+                } else {
+                    // new line from list item
+                    fallthrough
+                }
             case "list":
                 if metadata != nil {
                     let itemRange = getMetadataRange(id: metadata!["id"] as! UUID)
@@ -385,9 +398,9 @@ class TextEditor: UITextView, UITextViewDelegate {
                     }else{
                         // apply new metadata to the rest of the item
                         var newAttribute = prevAttribute
-                        var newMetadata = metadata.map { $0 }
-                        newMetadata!["id"] = UUID()
-                        newAttribute[.metadata] = newMetadata!
+                        var newMetadata = metadata!
+                        newMetadata["id"] = UUID()
+                        newAttribute[.metadata] = newMetadata
                         self.storage.addAttributes(newAttribute, range: restRange)
                         
                         // inset a linebreak with the old metadata
@@ -397,7 +410,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         self.selectedRange = NSRange(location: range.location + 1, length: 0)
                         
                         // set typing attributes
-                        if let typedAttributes = prevAttribute as? [String: Any] {
+                        if let typedAttributes = newAttribute as? [String: Any] {
                             self.typingAttributes = typedAttributes
                         }
                     }
@@ -422,13 +435,15 @@ class TextEditor: UITextView, UITextViewDelegate {
                         
                         if nextBlockType == blockType {
                             let metadata = nextAttributes[.metadata] as? [String: Any]
-                            // find the rest of the item and set to new metadata
-                            let itemRange = getMetadataRange(id: metadata!["id"] as! UUID)
-                            guard let itemRange = itemRange else { return false }
-                            
-                            let restRange = NSRange(location: range.location, length: itemRange.location + itemRange.length - range.location)
-                            // apply new metadata to the rest of the item
-                            self.storage.setAttributes(attributes, range: restRange)
+                            if metadata != nil {
+                                // find the rest of the item and set to new metadata
+                                let itemRange = getMetadataRange(id: metadata!["id"] as! UUID)
+                                guard let itemRange = itemRange else { return false }
+                                
+                                let restRange = NSRange(location: range.location, length: itemRange.location + itemRange.length - range.location)
+                                // apply new metadata to the rest of the item
+                                self.storage.setAttributes(attributes, range: restRange)
+                            }
                         }
                     }
                 default:

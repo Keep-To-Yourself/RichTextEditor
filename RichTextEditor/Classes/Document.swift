@@ -41,9 +41,6 @@ class Document {
         for (index, block) in blocks.enumerated() {
             let attributedString = block.block.toAttributedString()
             let mutableAttributedString = NSMutableAttributedString(attributedString: attributedString)
-            if index != blocks.count - 1 {
-                mutableAttributedString.append(NSAttributedString(string: "\n"))
-            }
             mutableAttributedString.addAttribute(.blockType, value: block.block.getType(), range: NSRange(location: 0, length: mutableAttributedString.length))
             mutableAttributedString.addAttribute(.blockID, value: block.id, range: NSRange(location: 0, length: mutableAttributedString.length))
             result.append(mutableAttributedString)
@@ -153,9 +150,6 @@ class BlockquoteContent {
                 for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
-                if index != items.count - 1 {
-                    str.append(NSAttributedString(string: "\n"))
-                }
                 if level != 0 {
                     let metadata: [String: Any] = [
                         "level": level,
@@ -201,9 +195,6 @@ class ListContent {
                 
                 for fragment in content {
                     str.append(fragment.toAttributedString())
-                }
-                if index != items.count - 1 {
-                    str.append(NSAttributedString(string: "\n"))
                 }
                 let metadata: [String: Any] = [
                     "level": level,

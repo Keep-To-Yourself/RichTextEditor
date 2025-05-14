@@ -68,7 +68,7 @@ class DocumentTextStorage: NSTextStorage {
             print("Attributes edited")
         }
         if !editedMask.contains(.editedCharacters) {
-            print("Return")
+            print("No changes")
             return
         }
         
@@ -82,6 +82,7 @@ class DocumentTextStorage: NSTextStorage {
         
         let prevAttribute = attributes(at: range.location - 1, effectiveRange: nil)
         guard let blockID = prevAttribute[.blockID] as? UUID else { return }
+        guard let blockType = prevAttribute[.blockType] as? String else { return }
         
         if delta >= 0 {
             // 插入或替换文本
@@ -90,6 +91,13 @@ class DocumentTextStorage: NSTextStorage {
             
             let addedString = attributedSubstring(from: range)
             print("Added String: \(addedString.string)")
+            
+            if addedString.string != "\n" {
+                if blockType == "blockquote" {
+                    let prevAttribute = attributes(at: range.location - 1, effectiveRange: nil)
+                    setAttributes(prevAttribute, range: range)
+                }
+            }
         } else {
             // 删除文本
             print("Delete")
