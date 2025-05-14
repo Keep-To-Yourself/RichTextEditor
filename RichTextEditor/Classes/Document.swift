@@ -38,9 +38,13 @@ class Document {
     
     func toAttributedString() -> NSAttributedString {
         let result = NSMutableAttributedString()
-        for block in blocks {
+        for (index, block) in blocks.enumerated() {
             let attributedString = block.block.toAttributedString()
             let mutableAttributedString = NSMutableAttributedString(attributedString: attributedString)
+            if index != blocks.count - 1 {
+                mutableAttributedString.append(NSAttributedString(string: "\n"))
+            }
+            mutableAttributedString.addAttribute(.blockType, value: block.block.getType(), range: NSRange(location: 0, length: mutableAttributedString.length))
             mutableAttributedString.addAttribute(.blockID, value: block.id, range: NSRange(location: 0, length: mutableAttributedString.length))
             result.append(mutableAttributedString)
         }
@@ -69,6 +73,19 @@ enum Block {
     case blockquote(content: BlockquoteContent)
     case list(content: ListContent)
     
+    func getType () -> String {
+        switch self {
+        case .paragraph:
+            return "paragraph"
+        case .heading:
+            return "heading"
+        case .blockquote:
+            return "blockquote"
+        case .list:
+            return "list"
+        }
+    }
+    
     func toAttributedString(level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         switch self {
@@ -77,8 +94,6 @@ enum Block {
                 let attributedString = fragment.toAttributedString()
                 result.append(attributedString)
             }
-            result.append(NSAttributedString(string: "\n"))
-            result.addAttribute(.blockType, value: "paragraph", range: NSRange(location: 0, length: result.length))
         case .heading(let level, let content):
             let fontSize: CGFloat = {
                 switch level {
@@ -100,14 +115,10 @@ enum Block {
                 let attributedFragment = NSAttributedString(string: fragment.text, attributes: attributes)
                 result.append(attributedFragment)
             }
-            result.append(NSAttributedString(string: "\n"))
-            result.addAttribute(.blockType, value: "heading", range: NSRange(location: 0, length: result.length))
         case .blockquote(let content):
             result.append(content.toAttributedString())
-            result.addAttribute(.blockType, value: "blockquote", range: NSRange(location: 0, length: result.length))
         case .list(let content):
             result.append(content.toAttributedString())
-            result.addAttribute(.blockType, value: "list", range: NSRange(location: 0, length: result.length))
         }
         return result
     }
@@ -129,7 +140,7 @@ class BlockquoteContent {
     
     func toAttributedString(level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        for item in items {
+        for (index, item) in items.enumerated() {
             let str = NSMutableAttributedString()
             switch item {
             case .text(let content):
@@ -142,7 +153,9 @@ class BlockquoteContent {
                 for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
-                str.append(NSAttributedString(string: "\n"))
+                if index != items.count - 1 {
+                    str.append(NSAttributedString(string: "\n"))
+                }
                 if level != 0 {
                     let metadata: [String: Any] = [
                         "level": level,
@@ -152,7 +165,6 @@ class BlockquoteContent {
                     str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 }
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
-//                str.append(NSAttributedString(string: "\n"))
             case .list(let content):
                 str.append(content.toAttributedString(level: level + 1))
             }
@@ -178,7 +190,7 @@ class ListContent {
     
     func toAttributedString(level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        for item in items {
+        for (index, item) in items.enumerated() {
             let str = NSMutableAttributedString()
             switch item {
             case .text(let content):
@@ -190,7 +202,9 @@ class ListContent {
                 for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
-                str.append(NSAttributedString(string: "\n"))
+                if index != items.count - 1 {
+                    str.append(NSAttributedString(string: "\n"))
+                }
                 let metadata: [String: Any] = [
                     "level": level,
                     "ordered": ordered,
@@ -198,7 +212,6 @@ class ListContent {
                 ]
                 str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
-//                str.append(NSAttributedString(string: "\n"))
             case .list(let content):
                 str.append(content.toAttributedString(level: level + 1))
             }
