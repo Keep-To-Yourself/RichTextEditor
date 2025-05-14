@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		71526FF714FF1EFA5CFA02C86291A7EE /* Pods-RichTextEditor_Tests-dummy.m in Sources */ = {isa = PBXBuildFile; fileRef = 531F18FE521ACCA55D3046FA854F0BC7 /* Pods-RichTextEditor_Tests-dummy.m */; };
 		786444CB4DEF85F41A6C5A9A2EB05E9D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 384DDA2CB25005BD6479B5987C619DD4 /* Foundation.framework */; };
-		7C8DA9DB2DC8630E0060E433 /* TextStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C8DA9DA2DC8630E0060E433 /* TextStorage.swift */; };
 		7CAAA3552DC116260044B488 /* RichTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3542DC116260044B488 /* RichTextEditor.swift */; };
 		7CAAA3572DC116310044B488 /* Toolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CAAA3562DC116310044B488 /* Toolbar.swift */; };
 		7CB9FE0E2DC1B64C0013D1C3 /* ToolbarConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */; };
@@ -56,7 +55,6 @@
 		77FFFE82BB79D52522ABE7EC5CDABD91 /* Pods-RichTextEditor_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = "Pods-RichTextEditor_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		79B76511D7576AFA923F4771D9481E7C /* Pods-RichTextEditor_Example-acknowledgements.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "Pods-RichTextEditor_Example-acknowledgements.plist"; sourceTree = "<group>"; };
 		7BD0DF7F4369C260F6B0111A69530DD0 /* RichTextEditor-dummy.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = "RichTextEditor-dummy.m"; sourceTree = "<group>"; };
-		7C8DA9DA2DC8630E0060E433 /* TextStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextStorage.swift; path = RichTextEditor/Classes/TextStorage.swift; sourceTree = "<group>"; };
 		7CAAA3542DC116260044B488 /* RichTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RichTextEditor.swift; path = RichTextEditor/Classes/RichTextEditor.swift; sourceTree = "<group>"; };
 		7CAAA3562DC116310044B488 /* Toolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Toolbar.swift; path = RichTextEditor/Classes/Toolbar.swift; sourceTree = "<group>"; };
 		7CB9FE0D2DC1B64C0013D1C3 /* ToolbarConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ToolbarConfiguration.swift; path = RichTextEditor/Classes/ToolbarConfiguration.swift; sourceTree = "<group>"; };
@@ -156,7 +154,6 @@
 				7CB9FE0F2DC1CA350013D1C3 /* TextEditor.swift */,
 				7CB9FE112DC248770013D1C3 /* RichTextEditorConfiguration.swift */,
 				7CB9FE152DC24C4F0013D1C3 /* Document.swift */,
-				7C8DA9DA2DC8630E0060E433 /* TextStorage.swift */,
 			);
 			name = RichTextEditor;
 			path = ../..;
@@ -413,7 +410,6 @@
 				7CB9FE102DC1CA350013D1C3 /* TextEditor.swift in Sources */,
 				7CAAA3552DC116260044B488 /* RichTextEditor.swift in Sources */,
 				7CB9FE162DC24C4F0013D1C3 /* Document.swift in Sources */,
-				7C8DA9DB2DC8630E0060E433 /* TextStorage.swift in Sources */,
 				7CAAA3572DC116310044B488 /* Toolbar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
