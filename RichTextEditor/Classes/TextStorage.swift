@@ -59,6 +59,19 @@ class DocumentTextStorage: NSTextStorage {
     override public func processEditing() {
         super.processEditing()
         
+        print("processEditing")
+        
+        if editedMask.contains(.editedCharacters) {
+            print("Characters edited")
+        }
+        if editedMask.contains(.editedAttributes) {
+            print("Attributes edited")
+        }
+        if !editedMask.contains(.editedCharacters) {
+            print("Return")
+            return
+        }
+        
         // range: {位置，长度}
         let range = self.editedRange
         // delta: 变化的长度
@@ -66,44 +79,20 @@ class DocumentTextStorage: NSTextStorage {
         // print("range: \(range), delta: \(delta)")
         
         guard range.location != NSNotFound && range.location > 0 else { return }
-        // TODO: Create a new block (?) when range.location == 0
         
-        var blockID: UUID?
-        var blockType: String?
-        var metadata: [String: Any]?
-        var blockRange = NSRange(location: NSNotFound, length: 0)
-        if range.location < length {
-            blockID = attribute(.blockID, at: range.location - 1, effectiveRange: &blockRange) as? UUID
-            blockType = attribute(.blockType, at: range.location - 1, effectiveRange: nil) as? String
-            metadata = attribute(.metadata, at: range.location - 1, effectiveRange: nil) as? [String: Any]
-        }
-        guard let blockID = blockID else { return }
-        guard let blockType = blockType else { return }
+        let prevAttribute = attributes(at: range.location - 1, effectiveRange: nil)
+        guard let blockID = prevAttribute[.blockID] as? UUID else { return }
         
         if delta >= 0 {
             // 插入或替换文本
-            // print("block range: \(blockRange)")
-            let blockString = attributedSubstring(from: blockRange)
+            // let blockString = attributedSubstring(from: blockRange)
             // print("Block ID: \(blockID), Content: \(blockString.string)")
             
             let addedString = attributedSubstring(from: range)
             print("Added String: \(addedString.string)")
-            
-            // apply attributes to the new content
-            
-            if addedString.string == "\n" {
-                // TODO: Process newline
-                // Blockquote/List item: 回车：新item，新的metadata id Shift+回车：新行，旧的metadata id
-            }
-            if metadata != nil {
-                addAttributes([.metadata: metadata!], range: editedRange)
-            }
-            addAttributes([
-                .blockID: blockID,
-                .blockType: blockType,
-            ], range: editedRange)
         } else {
             // 删除文本
+            print("Delete")
         }
         
         updateDocumentBlock(with: blockID)

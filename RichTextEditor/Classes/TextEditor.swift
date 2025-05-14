@@ -7,7 +7,7 @@
 
 import UIKit
 
-class TextEditor: UITextView {
+class TextEditor: UITextView, UITextViewDelegate {
     
     private let editor: RichTextEditor
     private let storage: DocumentTextStorage
@@ -338,5 +338,104 @@ class TextEditor: UITextView {
         default:
             return ""
         }
+    }
+    
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        self.delegate = self
+    }
+    
+    private func getMetadataRange(id: UUID) -> NSRange? {
+        var range: NSRange?
+        self.storage.enumerateAttribute(.metadata, in: NSRange(location: 0, length: self.storage.length), options: []) {
+            value, r, stop in
+            guard let value = value as? [String: Any] else { return }
+            if value["id"] as? UUID == id {
+                range = r
+                stop.pointee = true
+            }
+        }
+        return range
+    }
+    
+    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if text == "\n" {
+            // TODO: 处理一个item内的换行
+            // TODO: 处理多个换行
+            // TODO: 处理range.location == 0的情况
+            let prevAttribute = self.storage.attributes(at: range.location - 1, effectiveRange: nil)
+            
+            guard let blockType = prevAttribute[.blockType] as? String else { return false }
+            let metadata = prevAttribute[.metadata] as? [String: Any]
+            
+            switch blockType {
+            case "blockquote":
+                fallthrough
+            case "list":
+                if metadata != nil {
+                    let itemRange = getMetadataRange(id: metadata!["id"] as! UUID)
+                    guard let itemRange = itemRange else { return false }
+                    // find the rest of the item and set to new metadata
+                    let restRange = NSRange(location: range.location, length: itemRange.location + itemRange.length - range.location)
+                    //                    print("restRange: \(restRange)")
+                    //                    print(self.storage.attributedSubstring(from: restRange))
+                    if restRange.length == 0 {
+                        // TODO: 边界情况：在最后一个item添加新行
+                        print("A")
+                    }else{
+                        // apply new metadata to the rest of the item
+                        var newAttribute = prevAttribute
+                        var newMetadata = metadata.map { $0 }
+                        newMetadata!["id"] = UUID()
+                        newAttribute[.metadata] = newMetadata!
+                        self.storage.addAttributes(newAttribute, range: restRange)
+                        
+                        // inset a linebreak with the old metadata
+                        self.storage.insert(NSAttributedString(string: "\n", attributes: prevAttribute), at: range.location)
+                        
+                        // move cursor to the next line
+                        self.selectedRange = NSRange(location: range.location + 1, length: 0)
+                        
+                        // set typing attributes
+                        if let typedAttributes = prevAttribute as? [String: Any] {
+                            self.typingAttributes = typedAttributes
+                        }
+                    }
+                }
+            default:
+                break
+            }
+            return false
+        } else if text.isEmpty {
+            if self.storage.attributedSubstring(from: range).string == "\n" {
+                let attributes = self.storage.attributes(at: range.location, effectiveRange: nil)
+                
+                guard let blockType = attributes[.blockType] as? String else { return false }
+                
+                switch blockType {
+                case "blockquote":
+                    fallthrough
+                case "list":
+                    if range.location + 1 < self.storage.length {
+                        let nextAttributes = self.storage.attributes(at: range.location + 1, effectiveRange: nil)
+                        guard let nextBlockType = nextAttributes[.blockType] as? String else { return false }
+                        
+                        if nextBlockType == blockType {
+                            let metadata = nextAttributes[.metadata] as? [String: Any]
+                            // find the rest of the item and set to new metadata
+                            let itemRange = getMetadataRange(id: metadata!["id"] as! UUID)
+                            guard let itemRange = itemRange else { return false }
+                            
+                            let restRange = NSRange(location: range.location, length: itemRange.location + itemRange.length - range.location)
+                            // apply new metadata to the rest of the item
+                            self.storage.setAttributes(attributes, range: restRange)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        }
+        return true
     }
 }
