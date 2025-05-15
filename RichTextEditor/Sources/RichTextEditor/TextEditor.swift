@@ -10,11 +10,12 @@ import UIKit
 class TextEditor: UITextView, UITextViewDelegate {
     
     private let editor: RichTextEditor
+    private let document: Document
     
     init(_ editor: RichTextEditor) {
         self.editor = editor
         
-        let doc = Document(
+        document = Document(
             blocks: [
                 IdentifiedBlock(
                     block:
@@ -174,7 +175,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         super.init(frame: .zero, textContainer: nil)
         
-        self.textStorage.setAttributedString(doc.toAttributedString())
+        self.textStorage.setAttributedString(document.toAttributedString())
+        self.autocapitalizationType = .none
     }
     
     required init?(coder: NSCoder) {
@@ -405,9 +407,6 @@ class TextEditor: UITextView, UITextViewDelegate {
                 guard let ordered = value["ordered"] as? Bool else { return }
                 
                 if ordered {
-                    print(
-                        "text: \(attributedText.attributedSubstring(from: range).string)"
-                    )
                     if index[level] == nil {
                         index[level] = 0
                     } else {
@@ -540,18 +539,18 @@ class TextEditor: UITextView, UITextViewDelegate {
                 fallthrough
             case "blockquote":
                 if metadata == nil {
-                    self.textStorage.insert(
-                        NSAttributedString(
-                            string: "\n",
-                            attributes: prevAttribute
-                        ),
-                        at: range.location
+                    // insert a new line
+                    let linebreak = NSAttributedString(
+                        string: "\n",
+                        attributes: prevAttribute
                     )
+                    self.textStorage.replaceCharacters(in: range, with: linebreak)
                     // move cursor to the next line
                     self.selectedRange = NSRange(
-                        location: range.location + 1,
+                        location: range.location + linebreak.length,
                         length: 0
                     )
+                    self.typingAttributes = prevAttribute
                 } else {
                     // new line from list item
                     fallthrough
@@ -567,11 +566,30 @@ class TextEditor: UITextView, UITextViewDelegate {
                         location: range.location,
                         length: itemRange.location + itemRange.length - range.location
                     )
-                    //                    print("restRange: \(restRange)")
-                    //                    print(self.storage.attributedSubstring(from: restRange))
                     if restRange.length == 0 {
-                        // TODO: 边界情况：在最后一个item添加新行
-                        print("A")
+                        if range.location == self.textStorage.length {
+                            // 在文本最后的List的最后一行按Enter
+                            if self.textStorage.string.last == "\n" {
+                                // TODO: 降低一个level / new paragraph
+                            } else {
+                                // inset a linebreak with the old metadata
+                                let linebreak = NSAttributedString(
+                                    string: "\n",
+                                    attributes: prevAttribute
+                                )
+                                self.textStorage.replaceCharacters(in: range, with: linebreak)
+                                
+                                // move cursor to the next line
+                                self.selectedRange = NSRange(
+                                    location: range.location + linebreak.length,
+                                    length: 0
+                                )
+                                // TODO: 添加一个0宽字符
+                            }
+                        } else {
+                            // 在空行按Enter
+                            // TODO: 降低一个level / new paragraph
+                        }
                     } else {
                         // apply new metadata to the rest of the item
                         var newAttribute = prevAttribute
@@ -581,14 +599,15 @@ class TextEditor: UITextView, UITextViewDelegate {
                         self.textStorage.addAttributes(newAttribute, range: restRange)
                         
                         // inset a linebreak with the old metadata
-                        self.textStorage.insert(
-                            NSAttributedString(string: "\n", attributes: prevAttribute),
-                            at: range.location
+                        let linebreak = NSAttributedString(
+                            string: "\n",
+                            attributes: prevAttribute
                         )
+                        self.textStorage.replaceCharacters(in: range, with: linebreak)
                         
                         // move cursor to the next line
                         self.selectedRange = NSRange(
-                            location: range.location + 1,
+                            location: range.location + linebreak.length,
                             length: 0
                         )
                         
@@ -667,9 +686,12 @@ class TextEditor: UITextView, UITextViewDelegate {
             for: NSRange(location: cursor, length: 0)
         )
         let attributes: [NSAttributedString.Key: Any]
-        // TODO: 处理边界情况
         if cursor == lineRange.location {
             print("🟢 光标在行首")
+            if lineRange.length == 0 || (lineRange.length == 1 && fullText.character(at: lineRange.location) == "\n".utf16.first!) {
+                // let linebreak processor to decide typing attribute
+                return
+            }
             attributes = self.textStorage.attributes(
                 at: cursor + 1,
                 effectiveRange: nil
