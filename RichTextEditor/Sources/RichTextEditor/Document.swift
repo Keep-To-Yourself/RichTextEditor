@@ -147,6 +147,9 @@ class BlockquoteContent {
                 paragraphStyle.alignment = .left
                 paragraphStyle.lineSpacing = 4
                 
+                if level != 0 {
+                    str.append(NSAttributedString(string: "\u{200B}"))
+                }
                 for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
@@ -193,6 +196,7 @@ class ListContent {
                 paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
                 paragraphStyle.alignment = .left
                 
+                str.append(NSAttributedString(string: "\u{200B}"))
                 for fragment in content {
                     str.append(fragment.toAttributedString())
                 }

@@ -7,7 +7,7 @@
 
 import UIKit
 
-public class RichTextActionButton: UIButton {
+class RichTextActionButton: UIButton {
 	public let action: RichTextAction
 
 	// 点击事件的回调闭包，Toolbar 或其他容器可以设置这个回调

@@ -7,7 +7,7 @@
 
 import UIKit
 
-public enum RichTextAction: CaseIterable {
+enum RichTextAction: CaseIterable {
 	case bold
 	case italic
 	case underline

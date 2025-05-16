@@ -562,58 +562,40 @@ class TextEditor: UITextView, UITextViewDelegate {
                     )
                     guard let itemRange = itemRange else { return false }
                     // find the rest of the item and set to new metadata
+                    var newAttribute = prevAttribute
+                    var newMetadata = metadata!
+                    newMetadata["id"] = UUID()
+                    newAttribute[.metadata] = newMetadata
                     let restRange = NSRange(
                         location: range.location,
                         length: itemRange.location + itemRange.length - range.location
                     )
-                    if restRange.length == 0 {
-                        if range.location == self.textStorage.length {
-                            // 在文本最后的List的最后一行按Enter
-                            if self.textStorage.string.last == "\n" {
-                                // TODO: 降低一个level / new paragraph
-                            } else {
-                                // inset a linebreak with the old metadata
-                                let linebreak = NSAttributedString(
-                                    string: "\n",
-                                    attributes: prevAttribute
-                                )
-                                self.textStorage.replaceCharacters(in: range, with: linebreak)
-                                
-                                // move cursor to the next line
-                                self.selectedRange = NSRange(
-                                    location: range.location + linebreak.length,
-                                    length: 0
-                                )
-                                // TODO: 添加一个0宽字符
-                            }
-                        } else {
-                            // 在空行按Enter
-                            // TODO: 降低一个level / new paragraph
-                        }
-                    } else {
-                        // apply new metadata to the rest of the item
-                        var newAttribute = prevAttribute
-                        var newMetadata = metadata!
-                        newMetadata["id"] = UUID()
-                        newAttribute[.metadata] = newMetadata
-                        self.textStorage.addAttributes(newAttribute, range: restRange)
-                        
-                        // inset a linebreak with the old metadata
-                        let linebreak = NSAttributedString(
-                            string: "\n",
-                            attributes: prevAttribute
-                        )
-                        self.textStorage.replaceCharacters(in: range, with: linebreak)
-                        
-                        // move cursor to the next line
-                        self.selectedRange = NSRange(
-                            location: range.location + linebreak.length,
-                            length: 0
-                        )
-                        
-                        // set typing attributes
-                        self.typingAttributes = newAttribute
-                    }
+                    self.textStorage.addAttributes(newAttribute, range: restRange)
+                    // inset a linebreak with the old metadata
+                    let linebreak = NSAttributedString(
+                        string: "\n",
+                        attributes: prevAttribute
+                    )
+                    self.textStorage.replaceCharacters(in: range, with: linebreak)
+                    
+                    // insert a zero-width character
+                    let last = NSRange(
+                        location: range.location + linebreak.length,
+                        length: 0
+                    )
+                    let zeroWidthChar = NSAttributedString(
+                        string: "\u{200B}",
+                        attributes: newAttribute
+                    )
+                    self.textStorage.replaceCharacters(in: last, with: zeroWidthChar)
+                    
+                    // move cursor to the next line
+                    self.selectedRange = NSRange(
+                        location: range.location + linebreak.length + zeroWidthChar.length,
+                        length: 0
+                    )
+                    // set typing attributes
+                    self.typingAttributes = newAttribute
                 }
             default:
                 break
@@ -667,6 +649,8 @@ class TextEditor: UITextView, UITextViewDelegate {
                 default:
                     break
                 }
+            } else if self.textStorage.attributedSubstring(from: range).string == "\u{200B}" {
+                // TODO: level down
             }
         } else {
             let styled = NSAttributedString(string: text, attributes: self.typingAttributes)
@@ -678,31 +662,55 @@ class TextEditor: UITextView, UITextViewDelegate {
         return true
     }
     
+    private var previousSelectedRange: NSRange?
+    
     func textViewDidChangeSelection(_ textView: UITextView) {
         // TODO: manage typing attributes
-        let cursor = self.selectedRange.location
-        let fullText = self.textStorage.string as NSString
-        let lineRange = fullText.lineRange(
-            for: NSRange(location: cursor, length: 0)
-        )
-        let attributes: [NSAttributedString.Key: Any]
-        if cursor == lineRange.location {
-            print("🟢 光标在行首")
-            if lineRange.length == 0 || (lineRange.length == 1 && fullText.character(at: lineRange.location) == "\n".utf16.first!) {
-                // let linebreak processor to decide typing attribute
-                return
+        if self.selectedRange.length == 0 {
+            let cursor = self.selectedRange.location
+            let fullText = self.textStorage.string as NSString
+            let lineRange = fullText.lineRange(
+                for: NSRange(location: cursor, length: 0)
+            )
+            let attributes: [NSAttributedString.Key: Any]
+            if cursor == lineRange.location {
+                print("🟢 光标在行首")
+                if lineRange.length == 0 {
+                    // let linebreak processor to decide typing attribute
+                    return
+                }
+                if cursor != self.textStorage.length - 1 && self.textStorage.attributedSubstring(from: NSRange(location: cursor, length: 1)).string == "\u{200B}" {
+                    if previousSelectedRange != nil && previousSelectedRange!.location == cursor + 1 {
+                        let newPosition = max(1, cursor - 1)
+                        self.selectedRange = NSRange(
+                            location: newPosition,
+                            length: 0
+                        )
+                        print("[ZeroWidthChar] Move to prev line")
+                    }else if previousSelectedRange != nil && previousSelectedRange!.location == cursor - 1 {
+                        self.selectedRange = NSRange(
+                            location: cursor + 1,
+                            length: 0
+                        )
+                        print("[ZeroWidthChar] Move to next character")
+                    } else {
+                        // Is this even possible?
+                    }
+                    return
+                }
+                attributes = self.textStorage.attributes(
+                    at: cursor,
+                    effectiveRange: nil
+                )
+            } else {
+                print("🔵 光标不在行首")
+                attributes = self.textStorage.attributes(
+                    at: cursor - 1,
+                    effectiveRange: nil
+                )
             }
-            attributes = self.textStorage.attributes(
-                at: cursor + 1,
-                effectiveRange: nil
-            )
-        } else {
-            print("🔵 光标不在行首")
-            attributes = self.textStorage.attributes(
-                at: cursor - 1,
-                effectiveRange: nil
-            )
+            self.typingAttributes = attributes
         }
-        self.typingAttributes = attributes
+        self.previousSelectedRange = self.selectedRange
     }
 }
