@@ -22,7 +22,7 @@ class AppViewController: UIViewController {
             textEditor.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             textEditor.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             textEditor.topAnchor.constraint(equalTo: view.topAnchor, constant: 100),
-            textEditor.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            textEditor.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -100)
         ])
         
         Toolbar.shared.show(view: self.view)

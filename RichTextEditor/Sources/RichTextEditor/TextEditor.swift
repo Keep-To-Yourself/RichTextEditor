@@ -517,18 +517,28 @@ class TextEditor: UITextView, UITextViewDelegate {
     }
     
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        if text == "\n" {
-            // TODO: 处理多个换行
-            // TODO: 处理range.location == 0的情况
-            let prevAttribute = self.textStorage.attributes(
+        if self.textStorage.length == 0 {
+            // create a new paragraph
+            return false
+        }
+        let currentAttribute: [NSAttributedString.Key: Any];
+        if range.location == self.textStorage.length {
+            currentAttribute = self.textStorage.attributes(
                 at: range.location - 1,
                 effectiveRange: nil
             )
-            
-            guard let blockType = prevAttribute[.blockType] as? String else {
+        } else {
+            currentAttribute = self.textStorage.attributes(
+                at: range.location,
+                effectiveRange: nil
+            )
+        }
+        if text == "\n" {
+            // TODO: 处理多个换行
+            guard let blockType = currentAttribute[.blockType] as? String else {
                 return false
             }
-            let metadata = prevAttribute[.metadata] as? [String: Any]
+            let metadata = currentAttribute[.metadata] as? [String: Any]
             
             switch blockType {
             case "heading":
@@ -542,7 +552,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                     // insert a new line
                     let linebreak = NSAttributedString(
                         string: "\n",
-                        attributes: prevAttribute
+                        attributes: currentAttribute
                     )
                     self.textStorage.replaceCharacters(in: range, with: linebreak)
                     // move cursor to the next line
@@ -550,7 +560,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         location: range.location + linebreak.length,
                         length: 0
                     )
-                    self.typingAttributes = prevAttribute
+                    self.typingAttributes = currentAttribute
                 } else {
                     // new line from list item
                     fallthrough
@@ -562,7 +572,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                     )
                     guard let itemRange = itemRange else { return false }
                     // find the rest of the item and set to new metadata
-                    var newAttribute = prevAttribute
+                    var newAttribute = currentAttribute
                     var newMetadata = metadata!
                     newMetadata["id"] = UUID()
                     newAttribute[.metadata] = newMetadata
@@ -570,11 +580,13 @@ class TextEditor: UITextView, UITextViewDelegate {
                         location: range.location,
                         length: itemRange.location + itemRange.length - range.location
                     )
-                    self.textStorage.addAttributes(newAttribute, range: restRange)
+                    self.textStorage.addAttributes([
+                        .metadata: newMetadata
+                    ], range: restRange)
                     // inset a linebreak with the old metadata
                     let linebreak = NSAttributedString(
                         string: "\n",
-                        attributes: prevAttribute
+                        attributes: currentAttribute
                     )
                     self.textStorage.replaceCharacters(in: range, with: linebreak)
                     
@@ -602,58 +614,179 @@ class TextEditor: UITextView, UITextViewDelegate {
             }
             return false
         } else if text.isEmpty {
-            if self.textStorage.attributedSubstring(from: range).string == "\n" {
+            if self.textStorage.attributedSubstring(from: range).string == "\u{200B}" {
+                let attributes = self.textStorage.attributes(
+                    at: range.location,
+                    effectiveRange: nil
+                )
+                let metadata = attributes[.metadata] as? [String: Any]
+                if metadata == nil {
+                    // illegal state
+                    return false
+                }
+                let itemRange = getMetadataRange(
+                    id: metadata!["id"] as! UUID
+                )
+                guard let itemRange = itemRange else { return false }
+                
+                switch attributes[.blockType] as? String {
+                case "blockquote":
+                    let level = metadata!["level"] as! Int
+                    let newLevel = level - 1
+                    let paragraphStyle = BlockquoteContent.getParagraphStyle(level: newLevel)
+                    if newLevel > 0 {
+                        var newMetadata = metadata!
+                        newMetadata["level"] = newLevel
+                        // set to new metadata
+                        self.textStorage.addAttributes([
+                            .metadata: newMetadata,
+                            .paragraphStyle: paragraphStyle
+                        ], range: itemRange)
+                        // remove the zero-width character
+                        self.textStorage.replaceCharacters(
+                            in: NSRange(location: range.location, length: 1),
+                            with: NSAttributedString()
+                        )
+                    } else {
+                        self.textStorage.removeAttribute(.metadata, range: itemRange)
+                        self.textStorage.addAttributes([
+                            .paragraphStyle: paragraphStyle
+                        ], range: itemRange)
+                        // remove the zero-width character
+                        self.textStorage.replaceCharacters(
+                            in: NSRange(location: range.location, length: 1),
+                            with: NSAttributedString()
+                        )
+                        self.selectedRange = NSRange(
+                            location: range.location,
+                            length: 0
+                        )
+                    }
+                    return false
+                case "list":
+                    if range.location == 0 {
+                        // TODO: change to a paragraph
+                        return false
+                    }
+                    let prevAttributes = self.textStorage.attributes(
+                        at: range.location - 1,
+                        effectiveRange: nil
+                    )
+                    guard let prevBlockID = prevAttributes[.blockType] as? String else {
+                        // illegal state
+                        return false
+                    }
+                    guard let blockID = attributes[.blockType] as? String else {
+                        // illegal state
+                        return false
+                    }
+                    if prevBlockID == blockID {
+                        let level = metadata!["level"] as! Int
+                        let newLevel = level - 1
+                        
+                        if newLevel >= 0 {
+                            let prevMetadata = prevAttributes[.metadata] as? [String: Any]
+                            var newMetadata = metadata!
+                            newMetadata["level"] = newLevel
+                            newMetadata["ordered"] = prevMetadata!["ordered"]
+                            
+                            self.textStorage.addAttributes([
+                                .metadata: newMetadata,
+                                .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
+                            ], range: itemRange)
+                            updateListStyle()
+                        } else {
+                            let prevMetadata = prevAttributes[.metadata] as? [String: Any]
+                            self.textStorage.addAttribute(
+                                .metadata,
+                                value: prevMetadata!,
+                                range: itemRange
+                            )
+                            // remove the linebreak
+                            self.textStorage.replaceCharacters(in: NSRange(location: range.location - 1, length: 2), with: NSAttributedString())
+                            self.selectedRange = NSRange(
+                                location: range.location - 1,
+                                length: 0
+                            )
+                        }
+                        return false
+                    } else if prevAttributes[.blockType] as? String == "list" {
+                        // change this item to the prev list
+                        let prevMetadata = prevAttributes[.metadata] as? [String: Any]
+                        let paragraphStyle = prevAttributes[.paragraphStyle] as? NSParagraphStyle
+                        self.textStorage.addAttributes([
+                            .blockID: prevBlockID,
+                            .metadata: prevMetadata,
+                            .paragraphStyle: paragraphStyle
+                        ], range: itemRange)
+                        // remove the linebreak
+                        self.textStorage.replaceCharacters(in: NSRange(location: range.location - 1, length: 2), with: NSAttributedString())
+                        self.selectedRange = NSRange(
+                            location: range.location - 1,
+                            length: 0
+                        )
+                        return false
+                    } else {
+                        // TODO: change to a paragraph
+                    }
+                    break
+                default:
+                    break
+                }
+            } else if self.textStorage.attributedSubstring(from: range).string == "\n" {
                 let attributes = self.textStorage.attributes(
                     at: range.location,
                     effectiveRange: nil
                 )
                 
-                // TODO: 考虑两个块合并的情况
-                guard let blockType = attributes[.blockType] as? String else {
-                    return false
-                }
-                
-                switch blockType {
+                switch attributes[.blockType] as? String {
                 case "blockquote":
-                    fallthrough
-                case "list":
-                    if range.location + 1 < self.textStorage.length {
-                        let nextAttributes = self.textStorage.attributes(
-                            at: range.location + 1,
-                            effectiveRange: nil
-                        )
-                        guard let nextBlockType = nextAttributes[.blockType] as? String else {
-                            return false
-                        }
-                        
-                        if nextBlockType == blockType {
-                            let metadata = nextAttributes[.metadata] as? [String: Any]
-                            if metadata != nil {
-                                // find the rest of the item and set to new metadata
-                                let itemRange = getMetadataRange(
-                                    id: metadata!["id"] as! UUID
-                                )
-                                guard let itemRange = itemRange else {
-                                    return false
-                                }
-                                
-                                let restRange = NSRange(
-                                    location: range.location,
-                                    length: itemRange.location + itemRange.length - range.location
-                                )
-                                // apply new metadata to the rest of the item
-                                self.textStorage.setAttributes(attributes, range: restRange)
-                            }
-                        }
+                    if range.location == 0 {
+                        // TODO: change to a paragraph
+                        return false
                     }
+                    let prevAttributes = self.textStorage.attributes(
+                        at: range.location - 1,
+                        effectiveRange: nil
+                    )
+                    guard let prevBlockID = prevAttributes[.blockType] as? String else {
+                        // illegal state
+                        return false
+                    }
+                    guard let blockID = attributes[.blockType] as? String else {
+                        // illegal state
+                        return false
+                    }
+                    let fullText = self.textStorage.string as NSString
+                    let lineRange = fullText.lineRange(for: NSRange(location: range.location + 1, length: 0))
+                    if prevBlockID == blockID {
+                        let prevMetadata = prevAttributes[.metadata] as? [String: Any]
+                        let paragraphStyle = prevAttributes[.paragraphStyle] as? NSParagraphStyle
+                        if prevMetadata == nil {
+                            return true
+                        }
+                        self.textStorage.addAttributes([
+                            .metadata: prevMetadata!,
+                            .paragraphStyle: paragraphStyle!
+                        ], range: lineRange)
+                        
+                        // remove linebreak
+                        self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
+                        self.selectedRange = NSRange(
+                            location: range.location,
+                            length: 0
+                        )
+                        return false
+                    } else {
+                        // TODO: change to a paragraph
+                    }
+                    break
                 default:
                     break
                 }
-            } else if self.textStorage.attributedSubstring(from: range).string == "\u{200B}" {
-                // TODO: level down
             }
         } else {
-            let styled = NSAttributedString(string: text, attributes: self.typingAttributes)
+            let styled = NSAttributedString(string: text, attributes: currentAttribute)
             self.textStorage.replaceCharacters(in: range, with: styled)
             let newPosition = range.location + styled.length
             self.selectedRange = NSRange(location: newPosition, length: 0)
@@ -665,20 +798,11 @@ class TextEditor: UITextView, UITextViewDelegate {
     private var previousSelectedRange: NSRange?
     
     func textViewDidChangeSelection(_ textView: UITextView) {
-        // TODO: manage typing attributes
         if self.selectedRange.length == 0 {
             let cursor = self.selectedRange.location
             let fullText = self.textStorage.string as NSString
-            let lineRange = fullText.lineRange(
-                for: NSRange(location: cursor, length: 0)
-            )
-            let attributes: [NSAttributedString.Key: Any]
-            if cursor == lineRange.location {
-                print("🟢 光标在行首")
-                if lineRange.length == 0 {
-                    // let linebreak processor to decide typing attribute
-                    return
-                }
+            let lineRange = fullText.lineRange(for: NSRange(location: cursor, length: 0))
+            if lineRange.length != 0 && cursor == lineRange.location {
                 if cursor != self.textStorage.length - 1 && self.textStorage.attributedSubstring(from: NSRange(location: cursor, length: 1)).string == "\u{200B}" {
                     if previousSelectedRange != nil && previousSelectedRange!.location == cursor + 1 {
                         let newPosition = max(1, cursor - 1)
@@ -687,29 +811,15 @@ class TextEditor: UITextView, UITextViewDelegate {
                             length: 0
                         )
                         print("[ZeroWidthChar] Move to prev line")
-                    }else if previousSelectedRange != nil && previousSelectedRange!.location == cursor - 1 {
+                    } else {
                         self.selectedRange = NSRange(
                             location: cursor + 1,
                             length: 0
                         )
                         print("[ZeroWidthChar] Move to next character")
-                    } else {
-                        // Is this even possible?
                     }
-                    return
                 }
-                attributes = self.textStorage.attributes(
-                    at: cursor,
-                    effectiveRange: nil
-                )
-            } else {
-                print("🔵 光标不在行首")
-                attributes = self.textStorage.attributes(
-                    at: cursor - 1,
-                    effectiveRange: nil
-                )
             }
-            self.typingAttributes = attributes
         }
         self.previousSelectedRange = self.selectedRange
     }
