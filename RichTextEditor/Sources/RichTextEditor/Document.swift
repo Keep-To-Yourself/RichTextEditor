@@ -105,10 +105,12 @@ enum Block {
                 }
             }()
             let font = UIFont.systemFont(ofSize: fontSize, weight: .bold)
+			let headingMetadata: [String: Any] = ["level": level]
             for fragment in content {
                 let attributedString = fragment.toAttributedString()
                 var attributes = attributedString.attributes(at: 0, effectiveRange: nil)
                 attributes[NSAttributedString.Key.font] = font
+				attributes[NSAttributedString.Key.metadata] = headingMetadata
                 let attributedFragment = NSAttributedString(string: fragment.text, attributes: attributes)
                 result.append(attributedFragment)
             }

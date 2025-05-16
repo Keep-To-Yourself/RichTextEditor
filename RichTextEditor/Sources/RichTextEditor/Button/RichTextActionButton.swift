@@ -10,22 +10,36 @@ import UIKit
 public class RichTextActionButton: UIButton {
 	public let action: RichTextAction
 
-	// 点击事件的回调闭包，Toolbar 或其他容器可以设置这个回调
 	public var onTap: ((RichTextAction) -> Void)?
 
-	public init(action: RichTextAction, frame: CGRect = .zero) { // frame 通常由 AutoLayout 处理
-		self.action = action
-		super.init(frame: frame) // 调用父类 UIButton 的 init
-		
-		setupDisplayContent()
-		self.addTarget(self, action: #selector(buttonTapped), for: .touchUpInside)
-		
-		// 基础样式，可以根据需要调整或在 Toolbar 中统一设置
-		self.tintColor = .label // 对于 SF Symbols，tintColor 控制颜色
-		if self.title(for: .normal) != nil {
-			self.setTitleColor(.label, for: .normal)
-			self.setTitleColor(.systemGray, for: .highlighted)
+	override public var isSelected: Bool {
+		didSet {
+			updateAppearance()
 		}
+	}
+
+	override public var isHighlighted: Bool {
+		didSet {
+			if !isSelected {
+				alpha = isHighlighted ? 0.6 : 1.0
+			} else {
+				alpha = isHighlighted ? 0.8 : 1.0
+			}
+		}
+	}
+
+	public init(action: RichTextAction, frame: CGRect = .zero) {
+		self.action = action
+		super.init(frame: frame)
+
+		setupDisplayContent()
+		self.addTarget(
+			self,
+			action: #selector(buttonTapped),
+			for: .touchUpInside
+		)
+
+		updateAppearance()
 	}
 
 	required init?(coder: NSCoder) {
@@ -34,25 +48,53 @@ public class RichTextActionButton: UIButton {
 
 	private func setupDisplayContent() {
 		let displayContent = action.getDefaultButtonDisplayContent()
-		
+
 		if let image = displayContent.image {
 			self.setImage(image, for: .normal)
-			// (可选) 为按钮设置合适的内边距或调整 imageEdgeInsets，使图标看起来更好
-			// self.contentEdgeInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+			self.setImage(image.withTintColor(.systemBlue), for: .selected)
+			self.setImage(image.withTintColor(.systemGray), for: .highlighted)
+			self.imageView?.contentMode = .scaleAspectFit
+			self.imageEdgeInsets = UIEdgeInsets(
+				top: 1,
+				left: 1,
+				bottom: 1,
+				right: 1
+			)  // 调整图标内边距
 		} else if let title = displayContent.title {
 			self.setTitle(title, for: .normal)
-			// 根据标题设置字体，例如
-			switch action {
-			case .bold:
-				self.titleLabel?.font = UIFont.boldSystemFont(ofSize: 17)
-			case .italic:
-				self.titleLabel?.font = UIFont.italicSystemFont(ofSize: 17) // 注意：系统没有直接的 italicSystemFont，通常是描述符实现
-																		  // 先用普通字体占位
-				self.titleLabel?.font = UIFont.systemFont(ofSize: 17)
-			default:
-				self.titleLabel?.font = UIFont.systemFont(ofSize: 17)
-			}
+			self.titleLabel?.font = UIFont.systemFont(
+				ofSize: 15,
+				weight: .medium
+			)  // 统一字体
+			// 根据 isSelected 状态在 updateAppearance 中设置颜色
 		}
+	}
+
+	private func updateAppearance() {
+		if let title = self.title(for: .normal), !title.isEmpty {
+			self.setTitleColor(
+				isSelected ? (self.window?.tintColor ?? .systemBlue) : .label,
+				for: .normal
+			)
+			self.backgroundColor =
+				isSelected
+				? (self.window?.tintColor ?? .systemBlue).withAlphaComponent(
+					0.15
+				) : .clear
+			self.layer.cornerRadius = 5
+			self.clipsToBounds = true
+		} else if self.image(for: .normal) != nil {
+			self.tintColor =
+				isSelected ? (self.window?.tintColor ?? .systemBlue) : .label
+			self.backgroundColor =
+				isSelected
+				? (self.window?.tintColor ?? .systemBlue).withAlphaComponent(
+					0.15
+				) : .clear
+			self.layer.cornerRadius = 5
+			self.clipsToBounds = true
+		}
+		self.alpha = 1.0
 	}
 
 	@objc private func buttonTapped() {
@@ -61,13 +103,5 @@ public class RichTextActionButton: UIButton {
 		// TODO: 按钮的选中状态反馈 (例如点击后高亮，或根据编辑器状态更新选中)
 		// 比如： self.isSelected.toggle() 或 self.backgroundColor = .lightGray
 		// 实际的功能绑定会在后续步骤进行。
-	}
-	
-	// 预留一个方法，用于根据编辑器当前状态更新按钮的 UI (例如是否高亮)
-	public func updateVisualState(isActive: Bool) {
-		// TODO: 根据 isActive 状态改变按钮外观，比如背景色、tintColor 等
-		// self.isSelected = isActive // UIButton 有 isSelected 状态
-		// self.backgroundColor = isActive ? UIColor.systemGray4 : UIColor.clear
-		self.alpha = isActive ? 1.0 : 0.5 // 简单示例
 	}
 }
