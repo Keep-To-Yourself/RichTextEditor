@@ -105,12 +105,12 @@ enum Block {
                 }
             }()
             let font = UIFont.systemFont(ofSize: fontSize, weight: .bold)
-			let headingMetadata: [String: Any] = ["level": level]
+            let headingMetadata: [String: Any] = ["level": level]
             for fragment in content {
                 let attributedString = fragment.toAttributedString()
                 var attributes = attributedString.attributes(at: 0, effectiveRange: nil)
                 attributes[NSAttributedString.Key.font] = font
-				attributes[NSAttributedString.Key.metadata] = headingMetadata
+                attributes[NSAttributedString.Key.metadata] = headingMetadata
                 let attributedFragment = NSAttributedString(string: fragment.text, attributes: attributes)
                 result.append(attributedFragment)
             }
@@ -143,11 +143,7 @@ class BlockquoteContent {
             let str = NSMutableAttributedString()
             switch item {
             case .text(let content):
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.headIndent = 24 + CGFloat(level * 24)
-                paragraphStyle.firstLineHeadIndent = 24 + CGFloat(level * 24)
-                paragraphStyle.alignment = .left
-                paragraphStyle.lineSpacing = 4
+                let paragraphStyle = BlockquoteContent.getParagraphStyle(level: level)
                 
                 if level != 0 {
                     str.append(NSAttributedString(string: "\u{200B}"))
@@ -171,6 +167,15 @@ class BlockquoteContent {
         }
         return result
     }
+    
+    static func getParagraphStyle(level: Int) -> NSParagraphStyle {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.headIndent = 24 + CGFloat(level * 24)
+        paragraphStyle.firstLineHeadIndent = 24 + CGFloat(level * 24)
+        paragraphStyle.alignment = .left
+        paragraphStyle.lineSpacing = 4
+        return paragraphStyle
+    }
 }
 
 enum ListItem {
@@ -193,10 +198,7 @@ class ListContent {
             let str = NSMutableAttributedString()
             switch item {
             case .text(let content):
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.headIndent = CGFloat((level + 1) * 24)
-                paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
-                paragraphStyle.alignment = .left
+                let paragraphStyle = ListContent.getParagraphStyle(level: level)
                 
                 str.append(NSAttributedString(string: "\u{200B}"))
                 for fragment in content {
@@ -215,6 +217,14 @@ class ListContent {
             result.append(str)
         }
         return result
+    }
+    
+    static func getParagraphStyle(level: Int) -> NSParagraphStyle {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.headIndent = CGFloat((level + 1) * 24)
+        paragraphStyle.firstLineHeadIndent = CGFloat((level + 1) * 24)
+        paragraphStyle.alignment = .left
+        return paragraphStyle
     }
 }
 
