@@ -96,7 +96,7 @@ public class Toolbar: UIView {
 	}
 	
 	// 根据 RichTextAction 数组配置或更新按钮
-	public func configureButtons(actions: [RichTextAction]) {
+	private func configureButtons(actions: [RichTextAction]) {
 		actionButtons.forEach { $0.removeFromSuperview() }
 		buttonsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 		actionButtons.removeAll()
