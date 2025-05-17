@@ -18,6 +18,36 @@ class TextEditor: UITextView, UITextViewDelegate {
         document = Document(
             blocks: [
                 IdentifiedBlock(
+                    block: .list(
+                        content: ListContent(
+                            items: [
+                                .text(
+                                    content:[
+                                        InlineTextFragment(
+                                            text: "项目一\n",
+                                            isBold: false,
+                                            isItalic: false,
+                                            isUnderline: false,
+                                            textColor: nil
+                                        )
+                                    ]
+                                ),
+                                .text(
+                                    content:[
+                                        InlineTextFragment(
+                                            text: "项目二\n",
+                                            isBold: false,
+                                            isItalic: false,
+                                            isUnderline: false,
+                                            textColor: nil
+                                        )
+                                    ]
+                                )
+                            ]
+                        )
+                    )
+                ),
+                IdentifiedBlock(
                     block:
                             .heading(
                                 level: 1,
@@ -115,27 +145,29 @@ class TextEditor: UITextView, UITextViewDelegate {
                     block: .list(
                         content: ListContent(
                             items: [
-                                .text(
-                                    content:[
-                                        InlineTextFragment(
-                                            text: "项目一\n",
-                                            isBold: false,
-                                            isItalic: false,
-                                            isUnderline: false,
-                                            textColor: nil
-                                        )
-                                    ]
-                                ),
-                                .text(
-                                    content:[
-                                        InlineTextFragment(
-                                            text: "项目二\n",
-                                            isBold: false,
-                                            isItalic: false,
-                                            isUnderline: false,
-                                            textColor: nil
-                                        )
-                                    ]
+                                .list(
+                                    content: ListContent(
+                                        items: [
+                                            .text(
+                                                content:[InlineTextFragment(
+                                                    text: "嵌套项目\n",
+                                                    isBold: false,
+                                                    isItalic: true,
+                                                    isUnderline: false,
+                                                    textColor: nil
+                                                )]
+                                            ),
+                                            .text(
+                                                content:[InlineTextFragment(
+                                                    text: "嵌套项目2\n",
+                                                    isBold: true,
+                                                    isItalic: false,
+                                                    isUnderline: false,
+                                                    textColor: nil
+                                                )]
+                                            )
+                                        ], ordered: true
+                                    )
                                 ),
                                 .list(
                                     content: ListContent(
@@ -158,7 +190,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                                                     textColor: nil
                                                 )]
                                             )
-                                        ]
+                                        ], ordered: true
                                     )
                                 )
                             ]
@@ -355,7 +387,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                 blockquoteLayers.append(layer)
             }
             
-            var index: [Int: Int] = [:]
+            var index: [UUID: [Int: Int]] = [:]
             
             attributedText.enumerateAttribute(
                 .metadata,
@@ -371,14 +403,19 @@ class TextEditor: UITextView, UITextViewDelegate {
                 guard let value = value as? [String: Any] else { return }
                 guard let level = value["level"] as? Int else { return }
                 guard let ordered = value["ordered"] as? Bool else { return }
+                guard let parentID = value["parentID"] as? UUID else { return }
                 
-                if index[level] == nil {
-                    index[level] = 0
-                } else {
-                    index[level]! += 1
+                if ordered {
+                    var subIndex = index[parentID] ?? [:]
+                    if subIndex[level] == nil {
+                        subIndex[level] = 0
+                    } else {
+                        subIndex[level]! += 1
+                    }
+                    index[parentID] = subIndex
                 }
                 
-                let style = ordered ? getOrderedListStyle(level: level - 1, index: index[level]!) : getUnorderedListStyle(
+                let style = ordered ? getOrderedListStyle(level: level - 1, index: index[parentID]![level]!) : getUnorderedListStyle(
                     level: level - 1
                 )
                 
@@ -427,7 +464,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             range,
             _ in
             guard value as? String == "list" else { return }
-            var index: [Int: Int] = [:]
+            var index: [UUID: [Int: Int]] = [:]
             attributedText.enumerateAttribute(
                 .metadata,
                 in: range,
@@ -442,16 +479,19 @@ class TextEditor: UITextView, UITextViewDelegate {
                 guard let value = value as? [String: Any] else { return }
                 guard let level = value["level"] as? Int else { return }
                 guard let ordered = value["ordered"] as? Bool else { return }
+                guard let parentID = value["parentID"] as? UUID else { return }
                 
                 if ordered {
-                    if index[level] == nil {
-                        index[level] = 0
+                    var subIndex = index[parentID] ?? [:]
+                    if subIndex[level] == nil {
+                        subIndex[level] = 0
                     } else {
-                        index[level]! += 1
+                        subIndex[level]! += 1
                     }
+                    index[parentID] = subIndex
                 }
                 
-                let style = ordered ? getOrderedListStyle(level: level, index: index[level]!) : getUnorderedListStyle(
+                let style = ordered ? getOrderedListStyle(level: level, index: index[parentID]![level]!) : getUnorderedListStyle(
                     level: level
                 )
                 
@@ -553,6 +593,64 @@ class TextEditor: UITextView, UITextViewDelegate {
         return range
     }
     
+    private func getBlockRange(id: UUID) -> NSRange? {
+        var range: NSRange?
+        self.textStorage.enumerateAttribute(
+            .blockID,
+            in: NSRange(location: 0, length: self.textStorage.length),
+            options: []
+        ) {
+            value, r, stop in
+            if value as? UUID == id {
+                range = r
+                stop.pointee = true
+            }
+        }
+        return range
+    }
+    func removeBlockquote(lineRange: NSRange) {
+        self.textStorage.addAttributes([
+            .blockID: UUID(),
+            .blockType: "paragraph",
+        ], range: lineRange)
+        self.textStorage.removeAttribute(.paragraphStyle, range: lineRange)
+        // remove the zero-width character
+        self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 1), with: NSAttributedString())
+    }
+    
+    func removeListItemInBlockquote(itemRange: NSRange) {
+        self.textStorage.removeAttribute(.metadata, range: itemRange)
+        self.textStorage.addAttributes([
+            .paragraphStyle: BlockquoteContent.getParagraphStyle(level: 0)
+        ], range: itemRange)
+        // 不知道为什么在删除metadata后渲染出现了问题
+        DispatchQueue.main.async(execute: {
+            self.updateBlockquoteStyle()
+            self.updateListStyle()
+        })
+        
+        // TODO: move the following item to a new list
+    }
+    
+    func removeListItem(itemRange: NSRange) {
+        let newAttribute: [NSAttributedString.Key: Any] = [
+            .blockID: UUID(),
+            .blockType: "paragraph"
+        ]
+        self.textStorage.addAttributes(newAttribute, range: itemRange)
+        self.textStorage.removeAttribute(.metadata, range: itemRange)
+        self.textStorage.removeAttribute(.paragraphStyle, range: itemRange)
+        // remove the zero-width character
+        self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 1), with: NSAttributedString())
+        // 不知道为什么在删除metadata后渲染出现了问题
+        DispatchQueue.main.async(execute: {
+            self.updateBlockquoteStyle()
+            self.updateListStyle()
+        })
+        
+        // TODO: move the following item to a new list
+    }
+    
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         if text == "\n" {
             // 添加一个换行符
@@ -576,9 +674,19 @@ class TextEditor: UITextView, UITextViewDelegate {
                         attributes: self.typingAttributes
                     )
                     self.textStorage.replaceCharacters(in: range, with: linebreak)
+                    // insert a zero-width character
+                    let last = NSRange(
+                        location: range.location + linebreak.length,
+                        length: 0
+                    )
+                    let zeroWidthChar = NSAttributedString(
+                        string: "\u{200B}",
+                        attributes: self.typingAttributes
+                    )
+                    self.textStorage.replaceCharacters(in: last, with: zeroWidthChar)
                     // move cursor to the next line
                     self.selectedRange = NSRange(
-                        location: range.location + linebreak.length,
+                        location: range.location + linebreak.length + zeroWidthChar.length,
                         length: 0
                     )
                 } else {
@@ -594,27 +702,14 @@ class TextEditor: UITextView, UITextViewDelegate {
                     if itemRange.location + 1 == range.location {
                         // 在item开头按回车
                         if blockType == "list" {
-                            // TODO: Add block id
-                            let newAttribute: [NSAttributedString.Key: Any] = [
-                                .blockType: "paragraph"
-                            ]
-                            self.textStorage.addAttributes(newAttribute, range: itemRange)
-                            self.textStorage.removeAttribute(.metadata, range: itemRange)
-                            // remove the zero-width character
-                            self.textStorage.replaceCharacters(
-                                in: NSRange(location: range.location - 1, length: 1),
-                                with: NSAttributedString()
-                            )
+                            self.removeListItem(itemRange: itemRange)
                             // move cursor
                             self.selectedRange = NSRange(
                                 location: range.location - 1,
                                 length: 0
                             )
                         } else if blockType == "blockquote" {
-                            self.textStorage.removeAttribute(.metadata, range: itemRange)
-                            self.textStorage.addAttributes([
-                                .paragraphStyle: BlockquoteContent.getParagraphStyle(level: 0)
-                            ], range: itemRange)
+                            self.removeListItemInBlockquote(itemRange: itemRange)
                         }
                         return false
                     }
@@ -671,68 +766,120 @@ class TextEditor: UITextView, UITextViewDelegate {
                     effectiveRange: nil
                 )
                 let metadata = attributes[.metadata] as? [String: Any]
-                if metadata == nil {
-                    // illegal state
-                    return false
-                }
-                let itemRange = getMetadataRange(
-                    id: metadata!["id"] as! UUID
-                )
-                guard let itemRange = itemRange else { return false }
                 
                 switch attributes[.blockType] as? String {
                 case "blockquote":
+                    if metadata == nil {
+                        if range.location == 0 {
+                            let fullText = self.textStorage.string as NSString
+                            let lineRange = fullText.lineRange(for: NSRange(location: range.location, length: 0))
+                            self.removeBlockquote(lineRange: lineRange)
+                            return false
+                        }
+                        let prevAttributes = self.textStorage.attributes(
+                            at: range.location - 1,
+                            effectiveRange: nil
+                        )
+                        guard let prevBlockID = prevAttributes[.blockType] as? String else {
+                            // illegal state
+                            return false
+                        }
+                        guard let blockID = self.typingAttributes[.blockType] as? String else {
+                            // illegal state
+                            return false
+                        }
+                        let fullText = self.textStorage.string as NSString
+                        let lineRange = fullText.lineRange(for: NSRange(location: range.location + 1, length: 0))
+                        if prevBlockID == blockID {
+                            let prevMetadata = prevAttributes[.metadata] as? [String: Any]
+                            if prevMetadata == nil {
+                                // remove the zero-width character
+                                self.textStorage.replaceCharacters(
+                                    in: NSRange(location: range.location - 1, length: 2),
+                                    with: NSAttributedString()
+                                )
+                                // move cursor
+                                self.selectedRange = NSRange(
+                                    location: range.location - 1,
+                                    length: 0
+                                )
+                            } else {
+                                let paragraphStyle = prevAttributes[.paragraphStyle] as? NSParagraphStyle
+                                self.textStorage.addAttributes([
+                                    .metadata: prevMetadata!,
+                                    .paragraphStyle: paragraphStyle!
+                                ], range: lineRange)
+                                
+                                // remove linebreak
+                                self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
+                                // move cursor
+                                self.selectedRange = NSRange(
+                                    location: range.location,
+                                    length: 0
+                                )
+                                // TODO: update document
+                            }
+                        } else {
+                            self.removeBlockquote(lineRange: lineRange)
+                            // move cursor
+                            self.selectedRange = NSRange(
+                                location: range.location,
+                                length: 0
+                            )
+                        }
+                        return false
+                    } else {
+                        let itemRange = getMetadataRange(
+                            id: metadata!["id"] as! UUID
+                        )
+                        guard let itemRange = itemRange else { return false }
+                        
+                        let level = metadata!["level"] as! Int
+                        let newLevel = level - 1
+                        if newLevel > 0 {
+                            var newMetadata = metadata!
+                            newMetadata["level"] = newLevel
+                            // set to new metadata
+                            self.textStorage.addAttributes([
+                                .metadata: newMetadata,
+                                .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel),
+                            ], range: itemRange)
+                        } else {
+                            self.removeListItemInBlockquote(itemRange: itemRange)
+                        }
+                        // TODO: update document
+                        return false
+                    }
+                case "list":
+                    let itemRange = getMetadataRange(
+                        id: metadata!["id"] as! UUID
+                    )
+                    guard let itemRange = itemRange else { return false }
+                    
                     let level = metadata!["level"] as! Int
-                    let newLevel = level - 1
-                    let paragraphStyle = BlockquoteContent.getParagraphStyle(level: newLevel)
-                    if newLevel > 0 {
+                    if level - 1 >= 0 {
                         var newMetadata = metadata!
-                        newMetadata["level"] = newLevel
-                        // set to new metadata
+                        newMetadata["level"] = level - 1
+                        // TODO: Fix this
+                        newMetadata["ordered"] = false
+                        
                         self.textStorage.addAttributes([
                             .metadata: newMetadata,
-                            .paragraphStyle: paragraphStyle
+                            .paragraphStyle: ListContent.getParagraphStyle(level: level - 1)
                         ], range: itemRange)
-                        // remove the zero-width character
-                        self.textStorage.replaceCharacters(
-                            in: NSRange(location: range.location, length: 1),
-                            with: NSAttributedString()
-                        )
-                    } else {
-                        self.textStorage.removeAttribute(.metadata, range: itemRange)
-                        self.textStorage.addAttributes([
-                            .paragraphStyle: paragraphStyle
-                        ], range: itemRange)
-                        // remove the zero-width character
-                        self.textStorage.replaceCharacters(
-                            in: NSRange(location: range.location, length: 1),
-                            with: NSAttributedString()
-                        )
+                        return false
+                    }
+                    if range.location == 0 {
+                        // 在开头的List的第一个item删除零宽字符
+                        self.removeListItem(itemRange: itemRange)
+                        // move cursor
                         self.selectedRange = NSRange(
                             location: range.location,
                             length: 0
                         )
-                    }
-                    // TODO: update document
-                    return false
-                case "list":
-                    if range.location == 1 {
-                        // 在开头的List的第一个item删除零宽字符
-                        let restRange = NSRange(
-                            location: range.location,
-                            length: itemRange.location + itemRange.length - range.location
-                        )
-                        // TODO: Add block id
-                        self.textStorage.addAttribute(.blockType, value: "paragraph", range: restRange)
-                        self.textStorage.removeAttribute(.metadata, range: restRange)
-                        self.textStorage.removeAttribute(.paragraphStyle, range: restRange)
-                        // remove the zero-width character
-                        self.textStorage.replaceCharacters(
-                            in: NSRange(location: range.location, length: 1),
-                            with: NSAttributedString()
-                        )
                         return false
                     }
+                    
                     let prevAttributes = self.textStorage.attributes(
                         at: range.location - 1,
                         effectiveRange: nil
@@ -746,34 +893,18 @@ class TextEditor: UITextView, UITextViewDelegate {
                         return false
                     }
                     if prevBlockID == blockID {
-                        let level = metadata!["level"] as! Int
-                        let newLevel = level - 1
-                        
-                        if newLevel >= 0 {
-                            let prevMetadata = prevAttributes[.metadata] as? [String: Any]
-                            var newMetadata = metadata!
-                            newMetadata["level"] = newLevel
-                            newMetadata["ordered"] = prevMetadata!["ordered"]
-                            
-                            self.textStorage.addAttributes([
-                                .metadata: newMetadata,
-                                .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
-                            ], range: itemRange)
-                            updateListStyle()
-                        } else {
-                            let prevMetadata = prevAttributes[.metadata] as? [String: Any]
-                            self.textStorage.addAttribute(
-                                .metadata,
-                                value: prevMetadata!,
-                                range: itemRange
-                            )
-                            // remove the linebreak
-                            self.textStorage.replaceCharacters(in: NSRange(location: range.location - 1, length: 2), with: NSAttributedString())
-                            self.selectedRange = NSRange(
-                                location: range.location - 1,
-                                length: 0
-                            )
-                        }
+                        let prevMetadata = prevAttributes[.metadata] as? [String: Any]
+                        self.textStorage.addAttribute(
+                            .metadata,
+                            value: prevMetadata!,
+                            range: itemRange
+                        )
+                        // remove the linebreak
+                        self.textStorage.replaceCharacters(in: NSRange(location: range.location - 1, length: 2), with: NSAttributedString())
+                        self.selectedRange = NSRange(
+                            location: range.location - 1,
+                            length: 0
+                        )
                         // TODO: update document
                         return false
                     } else if prevAttributes[.blockType] as? String == "list" {
@@ -795,19 +926,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         return false
                     } else {
                         // 在List的第一个item最前方删除零宽字符
-                        let restRange = NSRange(
-                            location: range.location,
-                            length: itemRange.location + itemRange.length - range.location
-                        )
-                        // TODO: Add block id
-                        self.textStorage.addAttribute(.blockType, value: "paragraph", range: restRange)
-                        self.textStorage.removeAttribute(.metadata, range: restRange)
-                        self.textStorage.removeAttribute(.paragraphStyle, range: restRange)
-                        // remove the zero-width character
-                        self.textStorage.replaceCharacters(
-                            in: NSRange(location: range.location, length: 1),
-                            with: NSAttributedString()
-                        )
+                        self.removeListItem(itemRange: itemRange)
                         // move cursor
                         self.selectedRange = NSRange(
                             location: range.location,
@@ -821,55 +940,35 @@ class TextEditor: UITextView, UITextViewDelegate {
                 }
             } else if deletedText == "\n" {
                 // 删除一个换行符
+                let prevAttribute = self.textStorage.attributes(
+                    at: range.location,
+                    effectiveRange: nil
+                )
                 
                 switch self.typingAttributes[.blockType] as? String {
-                case "blockquote":
-                    if range.location == 0 {
-                        // TODO: change to a paragraph
-                        return false
+                case "paragraph":
+                    let blockID = self.typingAttributes[.blockID] as? UUID
+                    let blockRange = getBlockRange(id: blockID!)
+                    guard let blockRange = blockRange else { return false }
+                    
+                    let prevBlockID = prevAttribute[.blockID] as? UUID
+                    let prevBlockType = prevAttribute[.blockType] as? String
+                    self.textStorage.addAttributes([
+                        .blockID: prevBlockID!,
+                        .blockType: prevBlockType!
+                    ], range: blockRange)
+                    let metadata = prevAttribute[.metadata] as? [String: Any]
+                    let paragraphStyle = prevAttribute[.paragraphStyle] as? NSParagraphStyle
+                    if metadata != nil {
+                        self.textStorage.addAttributes([
+                            .metadata: metadata!,
+                        ], range: blockRange)
                     }
-                    let prevAttributes = self.textStorage.attributes(
-                        at: range.location,
-                        effectiveRange: nil
-                    )
-                    guard let prevBlockID = prevAttributes[.blockType] as? String else {
-                        // illegal state
-                        return false
+                    if paragraphStyle != nil {
+                        self.textStorage.addAttributes([
+                            .paragraphStyle: paragraphStyle!
+                        ], range: blockRange)
                     }
-                    guard let blockID = self.typingAttributes[.blockType] as? String else {
-                        // illegal state
-                        return false
-                    }
-                    let fullText = self.textStorage.string as NSString
-                    let lineRange = fullText.lineRange(for: NSRange(location: range.location + 1, length: 0))
-                    if prevBlockID == blockID {
-                        let prevMetadata = prevAttributes[.metadata] as? [String: Any]
-                        let paragraphStyle = prevAttributes[.paragraphStyle] as? NSParagraphStyle
-                        if prevMetadata == nil {
-                            return true
-                        } else {
-                            self.textStorage.addAttributes([
-                                .metadata: prevMetadata!,
-                                .paragraphStyle: paragraphStyle!
-                            ], range: lineRange)
-                            
-                            // remove linebreak
-                            self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
-                            // move cursor
-                            self.selectedRange = NSRange(
-                                location: range.location,
-                                length: 0
-                            )
-                            // TODO: update document
-                            return false
-                        }
-                    } else {
-                        // TODO: Add block id
-                        self.textStorage.addAttribute(.blockType, value: "paragraph", range: lineRange)
-                        self.textStorage.removeAttribute(.paragraphStyle, range: lineRange)
-                        return false
-                    }
-                    break
                 default:
                     break
                 }
