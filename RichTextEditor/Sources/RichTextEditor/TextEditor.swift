@@ -835,14 +835,17 @@ class TextEditor: UITextView, UITextViewDelegate {
                         guard let itemRange = itemRange else { return false }
                         
                         let level = metadata!["level"] as! Int
-                        let newLevel = level - 1
-                        if newLevel > 0 {
+                        if level - 1 > 0 {
                             var newMetadata = metadata!
-                            newMetadata["level"] = newLevel
+                            newMetadata["level"] = level - 1
+                            let curr = self.document.blockquotes[metadata!["parentID"] as! UUID]!
+                            let parent = self.document.blockquotes[curr.parentID!]!
+                            newMetadata["ordered"] = parent.ordered
+                            newMetadata["parent"] = parent.parentID
                             // set to new metadata
                             self.textStorage.addAttributes([
                                 .metadata: newMetadata,
-                                .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel),
+                                .paragraphStyle: BlockquoteContent.getParagraphStyle(level: level - 1),
                             ], range: itemRange)
                         } else {
                             self.removeListItemInBlockquote(itemRange: itemRange)
@@ -860,8 +863,10 @@ class TextEditor: UITextView, UITextViewDelegate {
                     if level - 1 >= 0 {
                         var newMetadata = metadata!
                         newMetadata["level"] = level - 1
-                        // TODO: Fix this
-                        newMetadata["ordered"] = false
+                        let curr = self.document.lists[metadata!["parentID"] as! UUID]!
+                        let parent = self.document.lists[curr.parentID!]!
+                        newMetadata["ordered"] = parent.ordered
+                        newMetadata["parent"] = parent.parentID
                         
                         self.textStorage.addAttributes([
                             .metadata: newMetadata,
