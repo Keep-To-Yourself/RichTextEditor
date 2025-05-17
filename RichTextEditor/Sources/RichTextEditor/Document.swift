@@ -115,9 +115,9 @@ enum Block {
                 result.append(attributedFragment)
             }
         case .blockquote(let content):
-            result.append(content.toAttributedString())
+            result.append(content.toAttributedString(parentID: UUID()))
         case .list(let content):
-            result.append(content.toAttributedString())
+            result.append(content.toAttributedString(parentID: UUID()))
         }
         return result
     }
@@ -137,7 +137,7 @@ class BlockquoteContent {
         self.ordered = ordered
     }
     
-    func toAttributedString(level: Int = 0) -> NSAttributedString {
+    func toAttributedString(level: Int = 0, parentID: UUID) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for item in items {
             let str = NSMutableAttributedString()
@@ -145,9 +145,7 @@ class BlockquoteContent {
             case .text(let content):
                 let paragraphStyle = BlockquoteContent.getParagraphStyle(level: level)
                 
-                if level != 0 {
-                    str.append(NSAttributedString(string: "\u{200B}"))
-                }
+                str.append(NSAttributedString(string: "\u{200B}"))
                 for fragment in content {
                     str.append(fragment.toAttributedString())
                 }
@@ -156,12 +154,13 @@ class BlockquoteContent {
                         "level": level,
                         "ordered": ordered,
                         "id": UUID(),
+                        "parentID": parentID,
                     ]
                     str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 }
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
             case .list(let content):
-                str.append(content.toAttributedString(level: level + 1))
+                str.append(content.toAttributedString(level: level + 1, parentID: UUID()))
             }
             result.append(str)
         }
@@ -192,7 +191,7 @@ class ListContent {
         self.ordered = ordered
     }
     
-    func toAttributedString(level: Int = 0) -> NSAttributedString {
+    func toAttributedString(level: Int = 0, parentID: UUID) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for item in items {
             let str = NSMutableAttributedString()
@@ -208,11 +207,12 @@ class ListContent {
                     "level": level,
                     "ordered": ordered,
                     "id": UUID(),
+                    "parentID": parentID,
                 ]
                 str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
             case .list(let content):
-                str.append(content.toAttributedString(level: level + 1))
+                str.append(content.toAttributedString(level: level + 1, parentID: UUID()))
             }
             result.append(str)
         }
