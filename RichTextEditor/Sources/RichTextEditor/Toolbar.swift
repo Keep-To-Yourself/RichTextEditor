@@ -132,24 +132,19 @@ public class Toolbar: UIView {
 	// 统一处理来自 RichTextActionButton 的动作
 	private func handleRichTextAction(_ action: RichTextAction) {
 		print("Toolbar: Action '\(action)' triggered.")
-		// TODO: 将动作传递给 currentRichTextEditor
-		// currentRichTextEditor?.perform(action) // 假设 RichTextEditor 有 perform(action:) 方法
 		switch action {
 		case .bold:
 			print("bold")
-		//			currentRichTextEditor?.toggleBold()
+			currentRichTextEditor?.toggleBold()
 		case .italic:
 			print("italic")
-		//			currentRichTextEditor?.toggleItalic()
-		// TODO: 实现斜体功能
+			currentRichTextEditor?.toggleItalic()
 		case .underline:
 			print("underline")
-		//			currentRichTextEditor?.toggleUnderline()
-		// TODO: 实现下划线功能
+			currentRichTextEditor?.toggleUnderline()
 		case .strikethrough:
 			print("strikethrough")
-		//			currentRichTextEditor?.toggleStrikethrough()
-		// TODO: 实现删除线功能
+			currentRichTextEditor?.toggleStrikethrough()
 		case .heading1:
 			print("heading1")
 		//			currentRichTextEditor?.applyHeading(level: 1)
@@ -173,13 +168,13 @@ public class Toolbar: UIView {
 		//			currentRichTextEditor?.applyParagraph()
 		case .blockquote:
 			print("blockquote")
-		//			currentRichTextEditor?.toggleBlockquote()
+			currentRichTextEditor?.toggleBlockquote()
 		case .orderedList:
 			print("orderedList")
-		//			currentRichTextEditor?.toggleOrderedList()
+			currentRichTextEditor?.toggleOrderedList()
 		case .unorderedList:
 			print("unorderedList")
-		//			currentRichTextEditor?.toggleUnorderedList()
+			currentRichTextEditor?.toggleUnorderedList()
 
 		// default:
 		//     break
@@ -514,6 +509,19 @@ public class Toolbar: UIView {
 				{
 					isActive = true
 				}
+			case .blockquote:
+				if currentBlockType == "blockquote" {
+					let isListItemWithinBlockquote =
+						currentMetadata != nil
+						&& currentBlockType == "blockquote"
+					if !isListItemWithinBlockquote {
+						isActive = true
+					}
+					if currentMetadata == nil {
+						isActive = true
+					}
+					someBlockLevelButtonIsActive = true  // 标记有块级按钮被激活
+				}
 			}
 			button.isSelected = isActive
 		}
@@ -554,23 +562,23 @@ public class Toolbar: UIView {
 }
 
 // 扩展 UIFont 以方便检查 traits (可选，但推荐)
-extension UIFont {
-	func withTraits(traits: UIFontDescriptor.SymbolicTraits) -> UIFont {
-		guard let descriptor = fontDescriptor.withSymbolicTraits(traits) else {
-			return self
-		}
-		return UIFont(descriptor: descriptor, size: pointSize)  // 保留原字号
-	}
-
-	func withoutTraits(traits: UIFontDescriptor.SymbolicTraits) -> UIFont {
-		let currentTraits = fontDescriptor.symbolicTraits
-		guard
-			let descriptor = fontDescriptor.withSymbolicTraits(
-				currentTraits.subtracting(traits)
-			)
-		else {
-			return self
-		}
-		return UIFont(descriptor: descriptor, size: pointSize)
-	}
-}
+//extension UIFont {
+//	func withTraits(traits: UIFontDescriptor.SymbolicTraits) -> UIFont {
+//		guard let descriptor = fontDescriptor.withSymbolicTraits(traits) else {
+//			return self
+//		}
+//		return UIFont(descriptor: descriptor, size: pointSize)  // 保留原字号
+//	}
+//
+//	func withoutTraits(traits: UIFontDescriptor.SymbolicTraits) -> UIFont {
+//		let currentTraits = fontDescriptor.symbolicTraits
+//		guard
+//			let descriptor = fontDescriptor.withSymbolicTraits(
+//				currentTraits.subtracting(traits)
+//			)
+//		else {
+//			return self
+//		}
+//		return UIFont(descriptor: descriptor, size: pointSize)
+//	}
+//}

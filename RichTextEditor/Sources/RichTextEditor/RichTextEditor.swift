@@ -10,7 +10,7 @@ import UIKit
 public class RichTextEditor: UIView {
     
     private var textView: TextEditor!
-    private var configuration: RichTextEditorConfiguration
+    internal var configuration: RichTextEditorConfiguration
     public var onFocusChanged: ((Bool) -> Void)?
     
     public init(configuration: RichTextEditorConfiguration) {
@@ -39,4 +39,32 @@ public class RichTextEditor: UIView {
         textView.textColor = configuration.textColor
         textView.backgroundColor = configuration.backgroundColor
     }
+	
+	public func toggleBold() {
+		textView.toggleBold()
+	}
+
+	public func toggleItalic() {
+		textView.toggleItalic()
+	}
+
+	public func toggleUnderline() {
+		textView.toggleUnderline()
+	}
+
+	public func toggleStrikethrough() {
+		textView.toggleStrikethrough()
+	}
+	
+	public func toggleBlockquote() {
+		textView.toggleBlockquote()
+	}
+	
+	public func toggleOrderedList() {
+		textView.toggleOrderedList()
+	}
+	
+	public func toggleUnorderedList() {
+			textView.toggleUnorderedList()
+		}
 }
