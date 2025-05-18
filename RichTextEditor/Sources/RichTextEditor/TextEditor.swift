@@ -9,7 +9,7 @@ import UIKit
 
 class TextEditor: UITextView, UITextViewDelegate {
     
-    private let editor: RichTextEditor
+    internal let editor: RichTextEditor
     private let document: Document
     
     init(_ editor: RichTextEditor) {
@@ -318,7 +318,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     private var blockquoteLayers: [CALayer] = []
     
-    private func updateBlockquoteStyle() {
+    internal func updateBlockquoteStyle() {
         // 删除所有旧图层
         blockquoteLayers.forEach { $0.removeFromSuperlayer() }
         blockquoteLayers.removeAll()
@@ -447,7 +447,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     private var listLayers: [CALayer] = []
     
-    private func updateListStyle() {
+    internal func updateListStyle() {
         listLayers.forEach { $0.removeFromSuperlayer() }
         listLayers.removeAll()
         
@@ -1011,6 +1011,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         // 光标在空文档中，使用默认样式
         DispatchQueue.main.async {
             textView.typingAttributes = newTypingAttributes
+			// 通知 toolbar 更新按钮状态
+			Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
         }
         if self.selectedRange.length == 0 {
             let fullText = self.textStorage.string as NSString
