@@ -810,11 +810,11 @@ class TextEditor: UITextView, UITextViewDelegate {
                                     .paragraphStyle: paragraphStyle!
                                 ], range: lineRange)
                                 
-                                // remove linebreak
-                                self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
+                                // remove linebreak and zero-width character
+                                self.textStorage.replaceCharacters(in: NSRange(location: range.location - 1, length: 2), with: NSAttributedString())
                                 // move cursor
                                 self.selectedRange = NSRange(
-                                    location: range.location,
+                                    location: range.location - 1,
                                     length: 0
                                 )
                                 // TODO: update document
@@ -1016,8 +1016,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         // 光标在空文档中，使用默认样式
         DispatchQueue.main.async {
             textView.typingAttributes = newTypingAttributes
-			// 通知 toolbar 更新按钮状态
-			Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
+            // 通知 toolbar 更新按钮状态
+            Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
         }
         if self.selectedRange.length == 0 {
             let fullText = self.textStorage.string as NSString
