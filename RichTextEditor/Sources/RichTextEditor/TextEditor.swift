@@ -810,11 +810,11 @@ class TextEditor: UITextView, UITextViewDelegate {
                                     .paragraphStyle: paragraphStyle!
                                 ], range: lineRange)
                                 
-                                // remove linebreak
-                                self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
+                                // remove linebreak and zero-width character
+                                self.textStorage.replaceCharacters(in: NSRange(location: range.location - 1, length: 2), with: NSAttributedString())
                                 // move cursor
                                 self.selectedRange = NSRange(
-                                    location: range.location,
+                                    location: range.location - 1,
                                     length: 0
                                 )
                                 // TODO: update document
@@ -835,14 +835,17 @@ class TextEditor: UITextView, UITextViewDelegate {
                         guard let itemRange = itemRange else { return false }
                         
                         let level = metadata!["level"] as! Int
-                        let newLevel = level - 1
-                        if newLevel > 0 {
+                        if level - 1 > 0 {
                             var newMetadata = metadata!
-                            newMetadata["level"] = newLevel
+                            newMetadata["level"] = level - 1
+                            let curr = self.document.blockquotes[metadata!["parentID"] as! UUID]!
+                            let parent = self.document.blockquotes[curr.parentID!]!
+                            newMetadata["ordered"] = parent.ordered
+                            newMetadata["parent"] = parent.parentID
                             // set to new metadata
                             self.textStorage.addAttributes([
                                 .metadata: newMetadata,
-                                .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel),
+                                .paragraphStyle: BlockquoteContent.getParagraphStyle(level: level - 1),
                             ], range: itemRange)
                         } else {
                             self.removeListItemInBlockquote(itemRange: itemRange)
@@ -860,8 +863,10 @@ class TextEditor: UITextView, UITextViewDelegate {
                     if level - 1 >= 0 {
                         var newMetadata = metadata!
                         newMetadata["level"] = level - 1
-                        // TODO: Fix this
-                        newMetadata["ordered"] = false
+                        let curr = self.document.lists[metadata!["parentID"] as! UUID]!
+                        let parent = self.document.lists[curr.parentID!]!
+                        newMetadata["ordered"] = parent.ordered
+                        newMetadata["parent"] = parent.parentID
                         
                         self.textStorage.addAttributes([
                             .metadata: newMetadata,
@@ -1011,8 +1016,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         // 光标在空文档中，使用默认样式
         DispatchQueue.main.async {
             textView.typingAttributes = newTypingAttributes
-			// 通知 toolbar 更新按钮状态
-			Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
+            // 通知 toolbar 更新按钮状态
+            Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
         }
         if self.selectedRange.length == 0 {
             let fullText = self.textStorage.string as NSString
