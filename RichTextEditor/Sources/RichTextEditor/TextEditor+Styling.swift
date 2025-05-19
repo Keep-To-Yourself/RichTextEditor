@@ -825,7 +825,6 @@ extension TextEditor {
         Toolbar.shared.updateButtonStates(basedOn: self.typingAttributes)
     }
     
-    // FIXME: 初始化内容应用这个捕获不准字体大小（同下decreaseIndent），自己编辑的文字没问题
     public func increaseIndent() {
         let affectedRanges = getAffectedParagraphRanges()
         // 当前实现只处理第一个受影响的段落，如果需要处理多个，需要遍历 affectedRanges
@@ -864,9 +863,7 @@ extension TextEditor {
                 self.textStorage.addAttributes([
                     .metadata: currentMetadata,
                     .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
-                ],
-                                               range: safeRange
-                )
+                ], range: safeRange)
             }
         case "paragraph", "heading":
             let currentParaStyle =
