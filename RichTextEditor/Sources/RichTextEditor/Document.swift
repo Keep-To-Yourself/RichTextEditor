@@ -14,18 +14,11 @@ extension NSAttributedString.Key {
     static let metadata = NSAttributedString.Key(rawValue: "metadata")
 }
 
-class WeakBox<T: AnyObject> {
-    weak var value: T?
-    init(_ value: T) {
-        self.value = value
-    }
-}
-
 public class Document: Codable {
     var blocks: OrderedDictionary<UUID, Block>
     
-    private var blockquotes: [UUID: WeakBox<BlockquoteContent>] = [:]
-    private var lists: [UUID: WeakBox<ListContent>] = [:]
+    private var blockquotes: [UUID: BlockquoteContent] = [:]
+    var lists: [UUID: ListContent] = [:]
     
     enum CodingKeys: String, CodingKey {
         case blocks
@@ -35,20 +28,55 @@ public class Document: Codable {
         self.blocks = blocks
     }
     
+    public required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        var blocksDecoder = try container.superDecoder(forKey: .blocks)
+        self.blocks = try OrderedDictionary<UUID, Block>(from: blocksDecoder)
+        
+        func processNestedBlockquotes(_ content: BlockquoteContent) {
+            self.addBlockquote(content)
+            for item in content.items {
+                if case .list(let nestedContent) = item {
+                    processNestedBlockquotes(nestedContent)
+                }
+            }
+        }
+        
+        func processNestedLists(_ content: ListContent) {
+            self.addList(content)
+            for item in content.items {
+                if case .list(let nestedContent) = item {
+                    processNestedLists(nestedContent)
+                }
+            }
+        }
+        
+        for (id, block) in blocks {
+            switch block {
+            case .blockquote(let content):
+                processNestedBlockquotes(content)
+            case .list(let content):
+                processNestedLists(content)
+            default:
+                continue
+            }
+        }
+    }
+    
     func addList(_ list: ListContent) {
-        lists[list.id] = WeakBox(list)
+        lists[list.id] = list
     }
     
     func getList(_ id: UUID) -> ListContent? {
-        return lists[id]?.value
+        return lists[id]
     }
     
     func addBlockquote(_ blockquote: BlockquoteContent) {
-        blockquotes[blockquote.id] = WeakBox(blockquote)
+        blockquotes[blockquote.id] = blockquote
     }
     
     func getBlockquote(_ id: UUID) -> BlockquoteContent? {
-        return blockquotes[id]?.value
+        return blockquotes[id]
     }
     
     public func toAttributedString() -> NSAttributedString {
@@ -188,10 +216,6 @@ class BlockquoteContent: Codable {
         paragraphStyle.lineSpacing = 4
         return paragraphStyle
     }
-    
-    deinit {
-        print("BlockquoteContent deinitialized")
-    }
 }
 
 enum ListItem: Codable {
@@ -265,7 +289,7 @@ class InlineTextFragment: Codable {
     var isUnderline: Bool
     var textColor: UIColor?
     
-
+    
     enum CodingKeys: String, CodingKey {
         case text, isBold, isItalic, isUnderline
         case red, green, blue, alpha

@@ -382,6 +382,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         }
         return range
     }
+    
     func removeBlockquote(lineRange: NSRange) {
         self.textStorage.addAttributes([
             .blockID: UUID(),
@@ -402,8 +403,6 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateBlockquoteStyle()
             self.updateListStyle()
         })
-        
-        // TODO: move the following item to a new list
     }
     
     func removeListItem(itemRange: NSRange) {
@@ -421,14 +420,12 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateBlockquoteStyle()
             self.updateListStyle()
         })
-        
-        // TODO: move the following item to a new list
     }
     
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        let blockID = self.typingAttributes[.blockID] as? UUID
         if text == "\n" {
             // 添加一个换行符
-            let blockID = self.typingAttributes[.blockID] as? UUID
             guard let blockType = self.typingAttributes[.blockType] as? String else {
                 return false
             }
@@ -526,7 +523,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                     )
                     // set typing attributes
                     self.typingAttributes = newAttribute
-                    // TODO: update document
+                    self.updateDocument(blockID: blockID!)
                 }
             default:
                 break
@@ -534,6 +531,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             return false
         } else if text.isEmpty {
             // 删除文字
+            let blockID = self.typingAttributes[.blockID] as? UUID
             let deletedText = self.textStorage.attributedSubstring(from: range).string
             if deletedText == "\u{200B}" {
                 // 删除一个零宽字符
@@ -556,11 +554,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             at: range.location - 1,
                             effectiveRange: nil
                         )
-                        guard let prevBlockID = prevAttributes[.blockType] as? String else {
-                            // illegal state
-                            return false
-                        }
-                        guard let blockID = self.typingAttributes[.blockType] as? String else {
+                        guard let prevBlockID = prevAttributes[.blockID] as? UUID else {
                             // illegal state
                             return false
                         }
@@ -593,7 +587,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                                     location: range.location - 1,
                                     length: 0
                                 )
-                                // TODO: update document
+                                self.updateDocument(blockID: blockID!)
                             }
                         } else {
                             self.removeBlockquote(lineRange: lineRange)
@@ -602,6 +596,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                                 location: range.location,
                                 length: 0
                             )
+                            self.updateDocument(blockID: blockID!)
                         }
                         return false
                     } else {
@@ -617,22 +612,21 @@ class TextEditor: UITextView, UITextViewDelegate {
                             let curr = self.document.getBlockquote(metadata!["parentID"] as! UUID)!
                             let parent = self.document.getBlockquote(curr.parentID!)!
                             newMetadata["ordered"] = parent.ordered
-                            newMetadata["parent"] = parent.parentID
+                            newMetadata["parentID"] = parent.id
                             // set to new metadata
                             self.textStorage.addAttributes([
                                 .metadata: newMetadata,
                                 .paragraphStyle: BlockquoteContent.getParagraphStyle(level: level - 1),
                             ], range: itemRange)
+                            self.updateDocument(blockID: blockID!)
                         } else {
                             self.removeListItemInBlockquote(itemRange: itemRange)
                         }
-                        // TODO: update document
+                        self.updateDocument(blockID: blockID!)
                         return false
                     }
                 case "list":
-                    let itemRange = getMetadataRange(
-                        id: metadata!["id"] as! UUID
-                    )
+                    let itemRange = getMetadataRange(id: metadata!["id"] as! UUID)
                     guard let itemRange = itemRange else { return false }
                     
                     let level = metadata!["level"] as! Int
@@ -642,12 +636,14 @@ class TextEditor: UITextView, UITextViewDelegate {
                         let curr = self.document.getList(metadata!["parentID"] as! UUID)!
                         let parent = self.document.getList(curr.parentID!)!
                         newMetadata["ordered"] = parent.ordered
-                        newMetadata["parent"] = parent.parentID
+                        newMetadata["parentID"] = parent.id
                         
                         self.textStorage.addAttributes([
                             .metadata: newMetadata,
                             .paragraphStyle: ListContent.getParagraphStyle(level: level - 1)
                         ], range: itemRange)
+                        self.updateDocument(blockID: blockID!)
+                        self.updateListStyle()
                         return false
                     }
                     if range.location == 0 {
@@ -658,6 +654,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             location: range.location,
                             length: 0
                         )
+                        self.updateDocument(blockID: blockID!)
                         return false
                     }
                     
@@ -665,11 +662,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         at: range.location - 1,
                         effectiveRange: nil
                     )
-                    guard let prevBlockID = prevAttributes[.blockType] as? String else {
-                        // illegal state
-                        return false
-                    }
-                    guard let blockID = attributes[.blockType] as? String else {
+                    guard let prevBlockID = prevAttributes[.blockID] as? UUID else {
                         // illegal state
                         return false
                     }
@@ -686,7 +679,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             location: range.location - 1,
                             length: 0
                         )
-                        // TODO: update document
+                        self.updateDocument(blockID: blockID!)
                         return false
                     } else if prevAttributes[.blockType] as? String == "list" {
                         // change this item to the prev list
@@ -703,7 +696,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             location: range.location - 1,
                             length: 0
                         )
-                        // TODO: update document
+                        self.updateDocument(blockID: blockID!)
                         return false
                     } else {
                         // 在List的第一个item最前方删除零宽字符
@@ -713,6 +706,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             location: range.location,
                             length: 0
                         )
+                        self.updateDocument(blockID: blockID!)
                         return false
                     }
                     break
@@ -750,6 +744,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             .paragraphStyle: paragraphStyle!
                         ], range: blockRange)
                     }
+                    self.updateDocument(blockID: blockID!)
                 default:
                     break
                 }
@@ -762,7 +757,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.textStorage.replaceCharacters(in: range, with: styled)
             let newPosition = range.location + styled.length
             self.selectedRange = NSRange(location: newPosition, length: 0)
-            // TODO: update document
+            self.updateDocument(blockID: blockID!)
             return false
         }
         return true
@@ -925,9 +920,9 @@ class TextEditor: UITextView, UITextViewDelegate {
                 let ordered = metadata!["ordered"] as! Bool
                 
                 if contents[parentID] == nil {
-                    let contentParentID: UUID
+                    let contentParentID: UUID?
                     if level == 0 {
-                        contentParentID = listContent.id
+                        contentParentID = nil
                     } else {
                         // This must be updated when increasing/decreasing indent
                         contentParentID = self.document.getList(parentID)!.parentID!
