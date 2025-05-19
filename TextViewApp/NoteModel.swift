@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import RichTextEditor
 
 // 定义通知名称
 extension Notification.Name {
@@ -9,34 +10,16 @@ extension Notification.Name {
 struct Note: Codable {
     let id: UUID
     var title: String
-    var content: Data // 存储NSAttributedString
+    var content: Document
     var createdAt: Date
     var updatedAt: Date
     
-    init(id: UUID = UUID(), title: String, content: NSAttributedString, createdAt: Date = Date(), updatedAt: Date = Date()) {
+    init(id: UUID = UUID(), title: String, content: Document, createdAt: Date = Date(), updatedAt: Date = Date()) {
         self.id = id
         self.title = title
-        self.content = try! NSKeyedArchiver.archivedData(withRootObject: content, requiringSecureCoding: false)
+        self.content = content
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-    }
-    
-    func getAttributedContent() -> NSAttributedString {
-        do {
-            return try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(content) as! NSAttributedString
-        } catch {
-            print("Error unarchiving content: \(error)")
-            return NSAttributedString(string: "")
-        }
-    }
-    
-    mutating func updateContent(_ content: NSAttributedString) {
-        do {
-            self.content = try NSKeyedArchiver.archivedData(withRootObject: content, requiringSecureCoding: false)
-            self.updatedAt = Date()
-        } catch {
-            print("Error archiving content: \(error)")
-        }
     }
 }
 
@@ -110,7 +93,8 @@ class NoteStore {
     private func saveNoteContent(_ note: Note) {
         let contentURL = noteContentURL(for: note.id)
         do {
-            try note.content.write(to: contentURL)
+            let data = try JSONEncoder().encode(note.content)
+            try data.write(to: contentURL)
             print("成功保存笔记内容: \(contentURL.path)")
         } catch {
             print("保存笔记内容失败: \(error)")
@@ -118,12 +102,13 @@ class NoteStore {
     }
     
     // 加载笔记内容
-    private func loadNoteContent(for id: UUID) -> Data? {
+    private func loadNoteContent(for id: UUID) -> Document? {
         let contentURL = noteContentURL(for: id)
         do {
-            let contentData = try Data(contentsOf: contentURL)
+            let data = try Data(contentsOf: contentURL)
+            let content = try JSONDecoder().decode(Document.self, from: data)
             print("成功加载笔记内容: \(contentURL.path)")
-            return contentData
+            return content
         } catch {
             print("加载笔记内容失败: \(error)")
             return nil
@@ -189,21 +174,15 @@ class NoteStore {
         }
         
         // 从文件加载笔记内容
-        if let contentData = loadNoteContent(for: id) {
-            do {
-                let attributedString = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(contentData) as! NSAttributedString
-                let completeNote = Note(
-                    id: metaNote.id,
-                    title: metaNote.title,
-                    content: attributedString,
-                    createdAt: metaNote.createdAt,
-                    updatedAt: metaNote.updatedAt
-                )
-                return completeNote
-            } catch {
-                print("解析笔记内容失败: \(error)")
-                return metaNote
-            }
+        if let content = loadNoteContent(for: id) {
+            let completeNote = Note(
+                id: metaNote.id,
+                title: metaNote.title,
+                content: content,
+                createdAt: metaNote.createdAt,
+                updatedAt: metaNote.updatedAt
+            )
+            return completeNote
         } else {
             print("未找到笔记内容文件，返回元数据")
             return metaNote
@@ -240,4 +219,4 @@ class NoteStore {
         
         print("========================")
     }
-} 
+}

@@ -13,8 +13,20 @@ class NotesListViewController: UIViewController {
         return formatter
     }()
     
+    init() {
+        super.init(nibName: nil, bundle: nil)
+        self.modalPresentationStyle = .fullScreen
+        self.modalTransitionStyle = .coverVertical
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func viewDidLoad() {
-        super.viewDidLoad()
+        self.modalPresentationStyle = .fullScreen
+        self.modalTransitionStyle = .coverVertical
+        
         setupUI()
         
         // 检查存储状态
@@ -105,9 +117,8 @@ class NotesListViewController: UIViewController {
     }
     
     @objc private func addButtonTapped() {
-        let noteEditorVC = NoteEditorViewController(mode: .new)
-        let navController = UINavigationController(rootViewController: noteEditorVC)
-        present(navController, animated: true)
+        let noteEditorVC = NoteEditorViewController()
+        present(noteEditorVC, animated: true)
     }
 }
 
@@ -136,9 +147,8 @@ extension NotesListViewController: UITableViewDelegate, UITableViewDataSource {
         tableView.deselectRow(at: indexPath, animated: true)
         
         let note = cachedNotes[indexPath.row]
-        let noteEditorVC = NoteEditorViewController(mode: .edit(noteId: note.id))
-        let navController = UINavigationController(rootViewController: noteEditorVC)
-        present(navController, animated: true)
+        let noteEditorVC = NoteEditorViewController(id: note.id)
+        present(noteEditorVC, animated: true)
     }
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
@@ -149,4 +159,4 @@ extension NotesListViewController: UITableViewDelegate, UITableViewDataSource {
             tableView.deleteRows(at: [indexPath], with: .fade)
         }
     }
-} 
+}
