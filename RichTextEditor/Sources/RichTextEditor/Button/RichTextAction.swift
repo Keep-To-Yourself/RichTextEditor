@@ -22,6 +22,8 @@ enum RichTextAction: CaseIterable {
 	case blockquote
 	case orderedList
 	case unorderedList
+	case increaseIndent
+	case decreaseIndent
 
 	public func getDefaultButtonDisplayContent() -> (
 		image: UIImage?, title: String?
@@ -56,6 +58,10 @@ enum RichTextAction: CaseIterable {
 				return (UIImage(systemName: "list.number"), nil)
 			case .unorderedList:
 				return (UIImage(systemName: "list.bullet"), nil)
+			case .increaseIndent:
+				return (UIImage(systemName: "increase.indent"), nil)
+			case .decreaseIndent:
+				return (UIImage(systemName: "decrease.indent"), nil)
 			}
 		} else {
 			// iOS 13 以下的回退方案 (纯文字)
@@ -74,6 +80,8 @@ enum RichTextAction: CaseIterable {
 			case .blockquote: return (nil, "引用")
 			case .orderedList: return (nil, "有序")
 			case .unorderedList: return (nil, "无序")
+			case .increaseIndent: return (nil, "->")
+			case .decreaseIndent: return (nil, "<-")
 			}
 		}
 	}
