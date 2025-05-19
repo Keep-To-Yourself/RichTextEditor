@@ -6,22 +6,7 @@
 //
 
 import UIKit
-
-//struct BlockInfo {
-//    let blockID: UUID
-//    let blockType: String
-//    let children: [BlockInfo]
-//
-//    init(blockID: UUID, blockType: String, children: [BlockInfo] = []) {
-//        self.blockID = blockID
-//        self.blockType = blockType
-//        self.children = children
-//    }
-//}
-//
-//struct Metadata {
-//    var level: Int?
-//}
+import Collections
 
 extension NSAttributedString.Key {
     static let blockID = NSAttributedString.Key(rawValue: "blockID")
@@ -36,13 +21,17 @@ class WeakBox<T: AnyObject> {
     }
 }
 
-public class Document {
-    var blocks: [UUID: Block] = [:]
+public class Document: Codable {
+    var blocks: OrderedDictionary<UUID, Block>
     
     private var blockquotes: [UUID: WeakBox<BlockquoteContent>] = [:]
     private var lists: [UUID: WeakBox<ListContent>] = [:]
     
-    init(blocks: [UUID: Block] = [:]) {
+    enum CodingKeys: String, CodingKey {
+        case blocks
+    }
+    
+    init(blocks: OrderedDictionary<UUID, Block> = [:]) {
         self.blocks = blocks
     }
     
@@ -62,7 +51,7 @@ public class Document {
         return blockquotes[id]?.value
     }
     
-    func toAttributedString() -> NSAttributedString {
+    public func toAttributedString() -> NSAttributedString {
         let result = NSMutableAttributedString()
         for (id, block) in blocks {
             let attributedString = block.toAttributedString(document: self)
@@ -75,7 +64,7 @@ public class Document {
     }
 }
 
-enum Block {
+enum Block: Codable {
     case paragraph(content: [InlineTextFragment])
     case heading(level: Int, content: [InlineTextFragment])
     case blockquote(content: BlockquoteContent)
@@ -134,12 +123,12 @@ enum Block {
     }
 }
 
-enum BlockquoteItem {
+enum BlockquoteItem: Codable {
     case text(content: [InlineTextFragment])
     case list(content: BlockquoteContent)
 }
 
-class BlockquoteContent {
+class BlockquoteContent: Codable {
     let id: UUID
     let parentID: UUID?
     var items: [BlockquoteItem]
@@ -205,12 +194,12 @@ class BlockquoteContent {
     }
 }
 
-enum ListItem {
+enum ListItem: Codable {
     case text(content: [InlineTextFragment])
     case list(content: ListContent)
 }
 
-class ListContent {
+class ListContent: Codable {
     let id: UUID
     let parentID: UUID?
     var items: [ListItem]
@@ -269,12 +258,18 @@ class ListContent {
     }
 }
 
-class InlineTextFragment {
+class InlineTextFragment: Codable {
     var text: String
     var isBold: Bool
     var isItalic: Bool
     var isUnderline: Bool
     var textColor: UIColor?
+    
+
+    enum CodingKeys: String, CodingKey {
+        case text, isBold, isItalic, isUnderline
+        case red, green, blue, alpha
+    }
     
     init(text: String, isBold: Bool = false, isItalic: Bool = false, isUnderline: Bool = false, textColor: UIColor? = nil) {
         self.text = text
@@ -282,6 +277,45 @@ class InlineTextFragment {
         self.isItalic = isItalic
         self.isUnderline = isUnderline
         self.textColor = textColor
+    }
+    
+    // MARK: - 编码
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(text, forKey: .text)
+        try container.encode(isBold, forKey: .isBold)
+        try container.encode(isItalic, forKey: .isItalic)
+        try container.encode(isUnderline, forKey: .isUnderline)
+        
+        if let color = textColor {
+            var r: CGFloat = 0
+            var g: CGFloat = 0
+            var b: CGFloat = 0
+            var a: CGFloat = 0
+            color.getRed(&r, green: &g, blue: &b, alpha: &a)
+            try container.encode(Double(r), forKey: .red)
+            try container.encode(Double(g), forKey: .green)
+            try container.encode(Double(b), forKey: .blue)
+            try container.encode(Double(a), forKey: .alpha)
+        }
+    }
+    
+    // MARK: - 解码
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(String.self, forKey: .text)
+        isBold = try container.decode(Bool.self, forKey: .isBold)
+        isItalic = try container.decode(Bool.self, forKey: .isItalic)
+        isUnderline = try container.decode(Bool.self, forKey: .isUnderline)
+        
+        if let r = try? container.decode(Double.self, forKey: .red),
+           let g = try? container.decode(Double.self, forKey: .green),
+           let b = try? container.decode(Double.self, forKey: .blue),
+           let a = try? container.decode(Double.self, forKey: .alpha) {
+            textColor = UIColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: CGFloat(a))
+        } else {
+            textColor = nil
+        }
     }
     
     func toAttributedString() -> NSAttributedString {
