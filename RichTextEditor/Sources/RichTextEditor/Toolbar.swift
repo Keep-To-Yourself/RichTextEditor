@@ -64,6 +64,7 @@ public class Toolbar: UIView {
 			.heading1, .heading2, .paragraph,
 			.blockquote,
 			.orderedList, .unorderedList,
+			.increaseIndent, .decreaseIndent,
 		])
 
 		setupConstraints()
@@ -147,25 +148,25 @@ public class Toolbar: UIView {
 			currentRichTextEditor?.toggleStrikethrough()
 		case .heading1:
 			print("heading1")
-		//			currentRichTextEditor?.applyHeading(level: 1)
+			currentRichTextEditor?.applyHeading(level: 1)
 		case .heading2:
 			print("heading2")
-		//			currentRichTextEditor?.applyHeading(level: 2)
+			currentRichTextEditor?.applyHeading(level: 2)
 		case .heading3:
 			print("heading3")
-		//			currentRichTextEditor?.applyHeading(level: 3)
+			currentRichTextEditor?.applyHeading(level: 3)
 		case .heading4:
 			print("heading4")
-		//			currentRichTextEditor?.applyHeading(level: 4)
+			currentRichTextEditor?.applyHeading(level: 4)
 		case .heading5:
 			print("heading5")
-		//			currentRichTextEditor?.applyHeading(level: 5)
+			currentRichTextEditor?.applyHeading(level: 5)
 		case .heading6:
 			print("heading6")
-		//			currentRichTextEditor?.applyHeading(level: 6)
+			currentRichTextEditor?.applyHeading(level: 6)
 		case .paragraph:
 			print("paragraph")
-		//			currentRichTextEditor?.applyParagraph()
+			currentRichTextEditor?.applyParagraph()
 		case .blockquote:
 			print("blockquote")
 			currentRichTextEditor?.toggleBlockquote()
@@ -175,6 +176,10 @@ public class Toolbar: UIView {
 		case .unorderedList:
 			print("unorderedList")
 			currentRichTextEditor?.toggleUnorderedList()
+		case .increaseIndent:  // New
+			currentRichTextEditor?.increaseIndent()
+		case .decreaseIndent:  // New
+			currentRichTextEditor?.decreaseIndent()
 
 		// default:
 		//     break
@@ -299,9 +304,9 @@ public class Toolbar: UIView {
 	}
 
 	@objc private func keyboardFrameChanged(_ notification: Notification) {
-		print(
-			"--- ⌨️ keyboardFrameChanged Notification: \(notification.name.rawValue) ---"
-		)
+//		print(
+//			"--- ⌨️ keyboardFrameChanged Notification: \(notification.name.rawValue) ---"
+//		)
 
 		guard let userInfo = notification.userInfo,
 			let superview = self.superview,
@@ -330,12 +335,12 @@ public class Toolbar: UIView {
 		)
 
 		// 打印原始键盘信息 (屏幕坐标系)
-		print("Keyboard Screen Frame (endFrame): \(endFrame)")
-		print("Toolbar Superview Frame: \(superview.frame)")
-		print("Toolbar Superview Bounds: \(superview.bounds)")
-		print("Toolbar Superview Safe Area Insets: \(superview.safeAreaInsets)")
-		print("Keyboard Frame in Superview: \(keyboardFrameInSuperview)")
-		print("Toolbar Configuration Height: \(self.configuration.height)")
+//		print("Keyboard Screen Frame (endFrame): \(endFrame)")
+//		print("Toolbar Superview Frame: \(superview.frame)")
+//		print("Toolbar Superview Bounds: \(superview.bounds)")
+//		print("Toolbar Superview Safe Area Insets: \(superview.safeAreaInsets)")
+//		print("Keyboard Frame in Superview: \(keyboardFrameInSuperview)")
+//		print("Toolbar Configuration Height: \(self.configuration.height)")
 
 		//		let keyboardYOnScreen = endFrame.origin.y
 		//
@@ -347,7 +352,7 @@ public class Toolbar: UIView {
 		//		let finalToolbarY: CGFloat
 		let finalToolbarYConstant: CGFloat
 		if keyboardFrameInSuperview.origin.y >= superview.bounds.height {
-			print("hidden")
+//			print("hidden")
 			//			finalToolbarY =
 			//				superview.bounds.height - self.configuration.height
 			//				- superview.safeAreaInsets.bottom
@@ -357,12 +362,12 @@ public class Toolbar: UIView {
 			finalToolbarYConstant =
 				superview.bounds.height - self.configuration.height
 				- superview.safeAreaInsets.bottom
-			print(
-				"Calculated finalToolbarYConstant (Keyboard Hidden): \(finalToolbarYConstant)"
-			)
+//			print(
+//				"Calculated finalToolbarYConstant (Keyboard Hidden): \(finalToolbarYConstant)"
+//			)
 
 		} else {
-			print("showen")
+//			print("showen")
 			//			finalToolbarY =
 			//				keyboardFrameInSuperview.origin.y - self.configuration.height
 			//			print(
@@ -370,22 +375,22 @@ public class Toolbar: UIView {
 			//			)
 			finalToolbarYConstant =
 				keyboardFrameInSuperview.origin.y - self.configuration.height
-			print(
-				"Calculated finalToolbarYConstant (Keyboard Visible): \(finalToolbarYConstant)"
-			)
+//			print(
+//				"Calculated finalToolbarYConstant (Keyboard Visible): \(finalToolbarYConstant)"
+//			)
 
 		}
 
-		print(
-			"Target Toolbar Top Constraint Constant: \(finalToolbarYConstant)"
-		)
+//		print(
+//			"Target Toolbar Top Constraint Constant: \(finalToolbarYConstant)"
+//		)
 		if let topConstraint = self.toolbarTopConstraint {
-			print(
-				"Current Toolbar Top Constraint Constant before animation: \(topConstraint.constant)"
-			)
+//			print(
+//				"Current Toolbar Top Constraint Constant before animation: \(topConstraint.constant)"
+//			)
 			topConstraint.constant = finalToolbarYConstant
 		} else {
-			print("Error: toolbarTopConstraint is nil. Cannot update position.")
+//			print("Error: toolbarTopConstraint is nil. Cannot update position.")
 			return
 		}
 
@@ -409,9 +414,13 @@ public class Toolbar: UIView {
 
 		for button in actionButtons {
 			var isActive = false
+			var isEnabled = true
+
 			let currentBlockType = attributes[.blockType] as? String
 			let currentFont = attributes[.font] as? UIFont
 			let currentMetadata = attributes[.metadata] as? [String: Any]
+			let currentParagraphStyle =
+				attributes[.paragraphStyle] as? NSParagraphStyle
 
 			switch button.action {
 			// --- Inline Styles ---
@@ -522,7 +531,36 @@ public class Toolbar: UIView {
 					}
 					someBlockLevelButtonIsActive = true  // 标记有块级按钮被激活
 				}
+			case .increaseIndent:
+				if currentBlockType == "list" {
+					let currentLevel = currentMetadata?["level"] as? Int ?? 0
+					let maxListLevel = 3
+					isEnabled = currentLevel < maxListLevel
+				} else if currentBlockType == "paragraph"
+					|| currentBlockType == "heading"
+				{
+					let currentIndent = currentParagraphStyle?.headIndent ?? 0
+					let tabWidth = 24.0
+					let maxTabs = 3
+					isEnabled = (currentIndent / tabWidth) < Double(maxTabs)
+				} else {
+					isEnabled = false
+				}
+				isActive = false
+			case .decreaseIndent:
+				if currentBlockType == "list" {
+					let currentLevel = currentMetadata?["level"] as? Int ?? 0
+					isEnabled = currentLevel >= 0  // Can always try to decrease, might become paragraph
+				} else if currentBlockType == "paragraph"
+					|| currentBlockType == "heading"
+				{
+					isEnabled = (currentParagraphStyle?.headIndent ?? 0) > 0
+				} else {
+					isEnabled = false
+				}
+				isActive = false
 			}
+			button.isEnabled = isEnabled
 			button.isSelected = isActive
 		}
 		if let paragraphButton = actionButtons.first(where: {
@@ -548,7 +586,7 @@ public class Toolbar: UIView {
 
 	private func isBlockAction(_ action: RichTextAction) -> Bool {
 		switch action {
-		case .heading1, .heading2, /* .heading3, etc. */ .blockquote,
+		case .heading1, .heading2, .heading3, .heading4, .heading5, .heading6, .blockquote,
 			.orderedList, .unorderedList:
 			return true
 		default:
