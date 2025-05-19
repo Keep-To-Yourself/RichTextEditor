@@ -29,41 +29,49 @@ extension NSAttributedString.Key {
     static let metadata = NSAttributedString.Key(rawValue: "metadata")
 }
 
-class Document {
-    var blocks: [IdentifiedBlock]
+class WeakBox<T: AnyObject> {
+    weak var value: T?
+    init(_ value: T) {
+        self.value = value
+    }
+}
+
+public class Document {
+    var blocks: [UUID: Block] = [:]
     
-    var blockquotes: [UUID: BlockquoteContent] = [:]
-    var lists: [UUID: ListContent] = [:]
+    private var blockquotes: [UUID: WeakBox<BlockquoteContent>] = [:]
+    private var lists: [UUID: WeakBox<ListContent>] = [:]
     
-    init(blocks: [IdentifiedBlock] = []) {
+    init(blocks: [UUID: Block] = [:]) {
         self.blocks = blocks
+    }
+    
+    func addList(_ list: ListContent) {
+        lists[list.id] = WeakBox(list)
+    }
+    
+    func getList(_ id: UUID) -> ListContent? {
+        return lists[id]?.value
+    }
+    
+    func addBlockquote(_ blockquote: BlockquoteContent) {
+        blockquotes[blockquote.id] = WeakBox(blockquote)
+    }
+    
+    func getBlockquote(_ id: UUID) -> BlockquoteContent? {
+        return blockquotes[id]?.value
     }
     
     func toAttributedString() -> NSAttributedString {
         let result = NSMutableAttributedString()
-        for block in blocks {
-            let attributedString = block.block.toAttributedString(document: self)
+        for (id, block) in blocks {
+            let attributedString = block.toAttributedString(document: self)
             let mutableAttributedString = NSMutableAttributedString(attributedString: attributedString)
-            mutableAttributedString.addAttribute(.blockType, value: block.block.getType(), range: NSRange(location: 0, length: mutableAttributedString.length))
-            mutableAttributedString.addAttribute(.blockID, value: block.id, range: NSRange(location: 0, length: mutableAttributedString.length))
+            mutableAttributedString.addAttribute(.blockType, value: block.getType(), range: NSRange(location: 0, length: mutableAttributedString.length))
+            mutableAttributedString.addAttribute(.blockID, value: id, range: NSRange(location: 0, length: mutableAttributedString.length))
             result.append(mutableAttributedString)
         }
         return result
-    }
-}
-
-class IdentifiedBlock {
-    let id: UUID
-    var block: Block
-    
-    init(block: Block) {
-        self.id = UUID()
-        self.block = block
-    }
-    
-    init(id: UUID, block: Block) {
-        self.id = id
-        self.block = block
     }
 }
 
@@ -118,9 +126,9 @@ enum Block {
                 result.append(attributedFragment)
             }
         case .blockquote(let content):
-            result.append(content.toAttributedString(document: document, parentID: UUID()))
+            result.append(content.toAttributedString(document: document))
         case .list(let content):
-            result.append(content.toAttributedString(document: document, parentID: UUID()))
+            result.append(content.toAttributedString(document: document))
         }
         return result
     }
@@ -132,20 +140,28 @@ enum BlockquoteItem {
 }
 
 class BlockquoteContent {
+    let id: UUID
+    let parentID: UUID?
     var items: [BlockquoteItem]
     var ordered: Bool
-    var parentID: UUID?
     
-    init(items: [BlockquoteItem], ordered: Bool = false) {
+    init(document: Document, parentID: UUID?, items: [BlockquoteItem], ordered: Bool = false) {
+        self.id = UUID()
+        self.parentID = parentID
         self.items = items
         self.ordered = ordered
+        document.addBlockquote(self)
     }
     
-    func toAttributedString(document: Document, level: Int = 0, parentID: UUID) -> NSAttributedString {
-        let uuid = UUID()
-        document.blockquotes[uuid] = self
+    init(document: Document, id: UUID, parentID: UUID?, items: [BlockquoteItem], ordered: Bool = false) {
+        self.id = id
         self.parentID = parentID
-        
+        self.items = items
+        self.ordered = ordered
+        document.addBlockquote(self)
+    }
+    
+    func toAttributedString(document: Document, level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for item in items {
             let str = NSMutableAttributedString()
@@ -162,13 +178,13 @@ class BlockquoteContent {
                         "level": level,
                         "ordered": ordered,
                         "id": UUID(),
-                        "parentID": uuid,
+                        "parentID": self.id,
                     ]
                     str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 }
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
             case .list(let content):
-                str.append(content.toAttributedString(document: document, level: level + 1, parentID: uuid))
+                str.append(content.toAttributedString(document: document, level: level + 1))
             }
             result.append(str)
         }
@@ -183,6 +199,10 @@ class BlockquoteContent {
         paragraphStyle.lineSpacing = 4
         return paragraphStyle
     }
+    
+    deinit {
+        print("BlockquoteContent deinitialized")
+    }
 }
 
 enum ListItem {
@@ -191,20 +211,28 @@ enum ListItem {
 }
 
 class ListContent {
+    let id: UUID
+    let parentID: UUID?
     var items: [ListItem]
     var ordered: Bool
-    var parentID: UUID?
     
-    init(items: [ListItem], ordered: Bool = false) {
+    init(document: Document, parentID: UUID?, items: [ListItem], ordered: Bool = false) {
+        self.id = UUID()
+        self.parentID = parentID
         self.items = items
         self.ordered = ordered
+        document.addList(self)
     }
     
-    func toAttributedString(document: Document, level: Int = 0, parentID: UUID) -> NSAttributedString {
-        let uuid = UUID()
-        document.lists[uuid] = self
+    init(document: Document, id: UUID, parentID: UUID?, items: [ListItem], ordered: Bool = false) {
+        self.id = id
         self.parentID = parentID
-        
+        self.items = items
+        self.ordered = ordered
+        document.addList(self)
+    }
+    
+    func toAttributedString(document: Document, level: Int = 0) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for item in items {
             let str = NSMutableAttributedString()
@@ -220,12 +248,12 @@ class ListContent {
                     "level": level,
                     "ordered": ordered,
                     "id": UUID(),
-                    "parentID": uuid,
+                    "parentID": self.id,
                 ]
                 str.addAttribute(.metadata, value: metadata, range: NSRange(location: 0, length: str.length))
                 str.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: str.length))
             case .list(let content):
-                str.append(content.toAttributedString(document: document, level: level + 1, parentID: uuid))
+                str.append(content.toAttributedString(document: document, level: level + 1))
             }
             result.append(str)
         }

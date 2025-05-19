@@ -15,232 +15,115 @@ class TextEditor: UITextView, UITextViewDelegate {
     init(_ editor: RichTextEditor) {
         self.editor = editor
         
-        document = Document(
-            blocks: [
-                IdentifiedBlock(
-                    block: .list(
-                        content: ListContent(
-                            items: [
-                                .text(
-                                    content:[
-                                        InlineTextFragment(
-                                            text: "项目一\n",
-                                            isBold: false,
-                                            isItalic: false,
-                                            isUnderline: false,
-                                            textColor: nil
-                                        )
-                                    ]
-                                ),
-                                .text(
-                                    content:[
-                                        InlineTextFragment(
-                                            text: "项目二\n",
-                                            isBold: false,
-                                            isItalic: false,
-                                            isUnderline: false,
-                                            textColor: nil
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+        self.document = Document()
+        self.document.blocks[UUID()] = .list(content: ListContent(document: self.document, parentID: nil, items: [
+            .text(
+                content:[
+                    InlineTextFragment(
+                        text: "项目一\n",
+                        isBold: false,
+                        isItalic: false,
+                        isUnderline: false,
+                        textColor: nil
                     )
-                ),
-                IdentifiedBlock(
-                    block:
-                            .heading(
-                                level: 1,
-                                content: [InlineTextFragment(
-                                    text: "标题\n",
-                                    isBold: true,
-                                    isItalic: false,
-                                    isUnderline: false,
-                                    textColor: .blue
-                                )]
-                            )
-                ),
-                IdentifiedBlock(
-                    block:
-                            .paragraph(
-                                content: [InlineTextFragment(
-                                    text: "正文内容\n",
-                                    isBold: false,
-                                    isItalic: true,
-                                    isUnderline: true,
-                                    textColor: nil
-                                )]
-                            )
-                ),
-                IdentifiedBlock(
-                    block: .list(
-                        content: ListContent(
-                            items: [
-                                .text(
-                                    content:[
-                                        InlineTextFragment(
-                                            text: "项目一\n",
-                                            isBold: false,
-                                            isItalic: false,
-                                            isUnderline: false,
-                                            textColor: nil
-                                        )
-                                    ]
-                                ),
-                                .text(
-                                    content:[
-                                        InlineTextFragment(
-                                            text: "项目二\n",
-                                            isBold: false,
-                                            isItalic: false,
-                                            isUnderline: false,
-                                            textColor: nil
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+                ]
+            ),
+            .text(
+                content:[
+                    InlineTextFragment(
+                        text: "项目二\n",
+                        isBold: false,
+                        isItalic: false,
+                        isUnderline: false,
+                        textColor: nil
                     )
+                ]
+            )
+        ]))
+        self.document.blocks[UUID()] =
+            .heading(
+                level: 1,
+                content: [InlineTextFragment(
+                    text: "标题\n",
+                    isBold: true,
+                    isItalic: false,
+                    isUnderline: false,
+                    textColor: .blue
+                )]
+            )
+        self.document.blocks[UUID()] =
+            .paragraph(
+                content: [InlineTextFragment(
+                    text: "正文内容\n",
+                    isBold: false,
+                    isItalic: true,
+                    isUnderline: true,
+                    textColor: nil
+                )]
+            )
+        let blockquoteContent = BlockquoteContent(document: self.document, parentID: nil, items: [
+            .text(
+                content: [InlineTextFragment(
+                    text: "引用内容\n",
+                    isBold: false,
+                    isItalic: false,
+                    isUnderline: false,
+                    textColor: nil
+                )]
+            )
+        ])
+        let blockquoteContentSubList = BlockquoteContent(document: self.document, parentID: blockquoteContent.id, items: [
+            .text(content: [InlineTextFragment(
+                text: "引用+列表\n",
+                isBold: false,
+                isItalic: false,
+                isUnderline: false,
+                textColor: nil
+            )]
+                 )
+        ])
+        blockquoteContent.items.append(.list(content: blockquoteContentSubList))
+        blockquoteContent.items.append(.text(content: [
+            InlineTextFragment(
+                text: "引用内容\n",
+                isBold: false,
+                isItalic: false,
+                isUnderline: false,
+                textColor: nil
+            )
+        ]))
+        self.document.blocks[UUID()] = .blockquote(content: blockquoteContent)
+        let listContent = ListContent(document: self.document, parentID: nil, items: [
+            .text(content: [
+                InlineTextFragment(
+                    text: "列表内容\n",
+                    isBold: false,
+                    isItalic: false,
+                    isUnderline: false,
+                    textColor: nil
                 ),
-                IdentifiedBlock(
-                    block: .blockquote(
-                        content: BlockquoteContent(
-                            items: [
-                                .text(
-                                    content: [InlineTextFragment(
-                                        text: "引用内容\n",
-                                        isBold: false,
-                                        isItalic: false,
-                                        isUnderline: false,
-                                        textColor: nil
-                                    )]
-                                ),
-                                .list(
-                                    content: BlockquoteContent(
-                                        items: [
-                                            .text(
-                                                content:[InlineTextFragment(
-                                                    text: "引用+列表\n",
-                                                    isBold: false,
-                                                    isItalic: false,
-                                                    isUnderline: false,
-                                                    textColor: nil
-                                                )]
-                                            )
-                                        ]
-                                    )
-                                ),
-                                .text(content: [InlineTextFragment(
-                                    text: "引用内容\n",
-                                    isBold: false,
-                                    isItalic: false,
-                                    isUnderline: false,
-                                    textColor: nil
-                                )])
-                            ]
-                        )
-                    )
+            ]),
+            .text(content: [InlineTextFragment(
+                text: "嵌套\n",
+                isBold: false,
+                isItalic: false,
+                isUnderline: false,
+                textColor: nil
                 ),
-                IdentifiedBlock(
-                    block: .list(
-                        content: ListContent(
-                            items: [
-                                .list(
-                                    content: ListContent(
-                                        items: [
-                                            .text(
-                                                content:[InlineTextFragment(
-                                                    text: "嵌套项目\n",
-                                                    isBold: false,
-                                                    isItalic: true,
-                                                    isUnderline: false,
-                                                    textColor: nil
-                                                )]
-                                            ),
-                                            .text(
-                                                content:[InlineTextFragment(
-                                                    text: "嵌套项目2\n",
-                                                    isBold: true,
-                                                    isItalic: false,
-                                                    isUnderline: false,
-                                                    textColor: nil
-                                                )]
-                                            )
-                                        ], ordered: true
-                                    )
-                                ),
-                                .list(
-                                    content: ListContent(
-                                        items: [
-                                            .text(
-                                                content:[InlineTextFragment(
-                                                    text: "嵌套项目\n",
-                                                    isBold: false,
-                                                    isItalic: true,
-                                                    isUnderline: false,
-                                                    textColor: nil
-                                                )]
-                                            ),
-                                            .text(
-                                                content:[InlineTextFragment(
-                                                    text: "嵌套项目2\n",
-                                                    isBold: true,
-                                                    isItalic: false,
-                                                    isUnderline: false,
-                                                    textColor: nil
-                                                )]
-                                            )
-                                        ], ordered: true
-                                    )
-                                )
-                            ]
-                        )
-                    )
-                ),
-                IdentifiedBlock(
-                    block: .list(
-                        content: ListContent(
-                            items: [
-                                .text(
-                                    content:[InlineTextFragment(
-                                        text: "有序项目一\n",
-                                        isBold: false,
-                                        isItalic: false,
-                                        isUnderline: false,
-                                        textColor: nil
-                                    )]
-                                ),
-                                .text(
-                                    content:[InlineTextFragment(
-                                        text: "有序项目二\n",
-                                        isBold: false,
-                                        isItalic: false,
-                                        isUnderline: false,
-                                        textColor: nil
-                                    )]
-                                ),
-                                .list(
-                                    content: ListContent(
-                                        items: [
-                                            .text(
-                                                content:[InlineTextFragment(
-                                                    text: "嵌套有序\n项目",
-                                                    isBold: false,
-                                                    isItalic: false,
-                                                    isUnderline: false,
-                                                    textColor: nil
-                                                )]
-                                            )
-                                        ]
-                                    )
-                                )
-                            ],
-                            ordered: true
-                        )
-                    )
-                )
-            ]
+            ])
+        ], ordered: true)
+        let listContentSubList = ListContent(document: self.document, parentID: listContent.id, items: [
+            .text(content: [InlineTextFragment(
+                text: "嵌套列表\n",
+                isBold: false,
+                isItalic: false,
+                isUnderline: false,
+                textColor: nil
+            ),
+            ])], ordered: true
         )
+        listContent.items.append(.list(content: listContentSubList))
+        self.document.blocks[UUID()] = .list(content: listContent)
         
         super.init(frame: .zero, textContainer: nil)
         
@@ -654,6 +537,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         if text == "\n" {
             // 添加一个换行符
+            let blockID = self.typingAttributes[.blockID] as? UUID
             guard let blockType = self.typingAttributes[.blockType] as? String else {
                 return false
             }
@@ -689,6 +573,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         location: range.location + linebreak.length + zeroWidthChar.length,
                         length: 0
                     )
+                    self.updateDocument(blockID: blockID!)
                 } else {
                     // new line from list item
                     fallthrough
@@ -838,8 +723,8 @@ class TextEditor: UITextView, UITextViewDelegate {
                         if level - 1 > 0 {
                             var newMetadata = metadata!
                             newMetadata["level"] = level - 1
-                            let curr = self.document.blockquotes[metadata!["parentID"] as! UUID]!
-                            let parent = self.document.blockquotes[curr.parentID!]!
+                            let curr = self.document.getBlockquote(metadata!["parentID"] as! UUID)!
+                            let parent = self.document.getBlockquote(curr.parentID!)!
                             newMetadata["ordered"] = parent.ordered
                             newMetadata["parent"] = parent.parentID
                             // set to new metadata
@@ -863,8 +748,8 @@ class TextEditor: UITextView, UITextViewDelegate {
                     if level - 1 >= 0 {
                         var newMetadata = metadata!
                         newMetadata["level"] = level - 1
-                        let curr = self.document.lists[metadata!["parentID"] as! UUID]!
-                        let parent = self.document.lists[curr.parentID!]!
+                        let curr = self.document.getList(metadata!["parentID"] as! UUID)!
+                        let parent = self.document.getList(curr.parentID!)!
                         newMetadata["ordered"] = parent.ordered
                         newMetadata["parent"] = parent.parentID
                         
@@ -998,12 +883,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         let cursor = self.selectedRange.location
         let length = self.textStorage.length
         
-        let defaultAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 16),
-            .foregroundColor: UIColor.label
-        ]
-        
-        var newTypingAttributes = defaultAttributes
+        var newTypingAttributes: [NSAttributedString.Key: Any]
         
         // 光标在已有文字中，取当前位置属性
         if length > 0 && cursor < length {
@@ -1014,6 +894,14 @@ class TextEditor: UITextView, UITextViewDelegate {
             newTypingAttributes = self.textStorage.attributes(at: cursor - 1, effectiveRange: nil)
         }
         // 光标在空文档中，使用默认样式
+        else {
+            newTypingAttributes = [
+                .blockID: UUID(),
+                .blockType: "paragraph",
+                .font: UIFont.systemFont(ofSize: 16),
+                .foregroundColor: UIColor.label,
+            ]
+        }
         DispatchQueue.main.async {
             textView.typingAttributes = newTypingAttributes
             // 通知 toolbar 更新按钮状态
@@ -1042,5 +930,140 @@ class TextEditor: UITextView, UITextViewDelegate {
             }
         }
         self.previousSelectedRange = self.selectedRange
+    }
+    
+    func updateDocument(blockID: UUID) {
+        var blockRange: NSRange?
+        self.textStorage.enumerateAttribute(
+            .blockID,
+            in: NSRange(location: 0, length: self.textStorage.length),
+            options: []
+        ) {
+            value, range, stop in
+            if value as? UUID != blockID {
+                return
+            }
+            stop.pointee = true
+            blockRange = range
+        }
+        if blockRange == nil {
+            self.document.blocks.removeValue(forKey: blockID)
+            return
+        }
+        let blockType = self.textStorage.attributes(at: blockRange!.location, effectiveRange: nil)[.blockType] as? String
+        
+        let content = self.textStorage.attributedSubstring(from: blockRange!)
+        
+        var block: Block
+        switch blockType {
+        case "heading":
+            var fragments: [InlineTextFragment] = []
+            let font = content.attributes(at: 0, effectiveRange: nil)[.font] as! UIFont
+            let level: Int = {
+                switch font.pointSize {
+                // TODO: Use rem instead of fixed size
+                case 32: return 1
+                case 24: return 2
+                case 18.72: return 3
+                case 16: return 4
+                case 13.28: return 5
+                case 10.72: return 6
+                default: return 4
+                }
+            }()
+            content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
+                let substring = content.attributedSubstring(from: range)
+                let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
+                fragments.append(fragment)
+            }
+            block = .heading(level: level, content: fragments)
+        case "paragraph":
+            var fragments: [InlineTextFragment] = []
+            content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
+                let substring = content.attributedSubstring(from: range)
+                let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
+                fragments.append(fragment)
+            }
+            block = .paragraph(content: fragments)
+        case "blockquote":
+            let blockquoteContent = BlockquoteContent(document: self.document, parentID: nil, items: [])
+            
+            var contents: [UUID: BlockquoteContent] = [:]
+            content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
+                let substring = content.attributedSubstring(from: range)
+                let metadata = attributes[.metadata] as? [String: Any]
+                if metadata == nil {
+                    // default content in blockquote
+                    let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
+                    blockquoteContent.items.append(.text(content: [fragment]))
+                } else {
+                    let id = metadata!["id"] as! UUID
+                    let parentID = metadata!["parentID"] as! UUID
+                    let level = metadata!["level"] as! Int
+                    let ordered = metadata!["ordered"] as! Bool
+                    
+                    if contents[parentID] == nil {
+                        let contentParentID: UUID
+                        if level == 1 {
+                            contentParentID = blockquoteContent.id
+                        } else {
+                            // This must be updated when increasing/decreasing indent
+                            contentParentID = self.document.getBlockquote(parentID)!.parentID!
+                        }
+                        contents[parentID] = BlockquoteContent(document: self.document, parentID: contentParentID, items: [])
+                        blockquoteContent.items.append(.list(content: contents[parentID]!))
+                    }
+                    let currentContent = contents[parentID]!
+                    
+                    let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
+                    currentContent.items.append(.text(content: [fragment]))
+                }
+            }
+            block = .blockquote(content: blockquoteContent)
+        case "list":
+            let listContent = ListContent(document: self.document, parentID: nil, items: [])
+            
+            var contents: [UUID: ListContent] = [:]
+            content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
+                let substring = content.attributedSubstring(from: range)
+                let metadata = attributes[.metadata] as? [String: Any]
+                
+                let id = metadata!["id"] as! UUID
+                let parentID = metadata!["parentID"] as! UUID
+                let level = metadata!["level"] as! Int
+                let ordered = metadata!["ordered"] as! Bool
+                
+                if contents[parentID] == nil {
+                    let contentParentID: UUID
+                    if level == 0 {
+                        contentParentID = listContent.id
+                    } else {
+                        // This must be updated when increasing/decreasing indent
+                        contentParentID = self.document.getList(parentID)!.parentID!
+                    }
+                    contents[parentID] = ListContent(document: self.document, parentID: contentParentID, items: [])
+                    listContent.items.append(.list(content: contents[parentID]!))
+                }
+                let currentContent = contents[parentID]!
+                
+                let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
+                currentContent.items.append(.text(content: [fragment]))
+            }
+            block = .list(content: listContent)
+        default:
+            return
+        }
+        
+        self.document.blocks[blockID] = block
+    }
+    
+    private func toInlineTextFragment(_ string: String, attributes: [NSAttributedString.Key: Any]) -> InlineTextFragment {
+        let font = attributes[.font] as? UIFont
+        let isBold = font != nil && font!.isBold
+        let isItalic = font != nil && font!.isItalic
+        let isUnderline = attributes[.underlineStyle] != nil && attributes[.underlineStyle] as! Int == 1
+        let textColor = attributes[.foregroundColor] as? UIColor
+        let fragment = InlineTextFragment(text: string, isBold: isBold, isItalic: isItalic, isUnderline: isUnderline, textColor: textColor)
+        return fragment
     }
 }
