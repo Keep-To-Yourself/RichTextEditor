@@ -10,8 +10,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         window = UIWindow(frame: UIScreen.main.bounds)
-        let rootVC = AppViewController()
-        window?.rootViewController = rootVC
+        let notesListVC = NotesListViewController()
+        let navigationController = UINavigationController(rootViewController: notesListVC)
+        window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
         return true
     }
