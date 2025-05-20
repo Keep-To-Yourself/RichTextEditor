@@ -9,8 +9,8 @@ import UIKit
 
 class TextEditor: UITextView, UITextViewDelegate {
     
-    internal let editor: RichTextEditor
-    internal let document: Document
+    let editor: RichTextEditor
+    let document: Document
     
     init(_ editor: RichTextEditor, document: Document) {
         self.editor = editor
@@ -18,7 +18,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         super.init(frame: .zero, textContainer: nil)
         
-        self.textStorage.setAttributedString(document.toAttributedString())
+        self.textStorage.setAttributedString(document.toAttributedString(configuration: self.editor.configuration))
         self.autocapitalizationType = .none
     }
     
@@ -80,7 +80,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     private var blockquoteLayers: [CALayer] = []
     
-    internal func updateBlockquoteStyle() {
+    private func updateBlockquoteStyle() {
         // 删除所有旧图层
         blockquoteLayers.forEach { $0.removeFromSuperlayer() }
         blockquoteLayers.removeAll()
@@ -198,7 +198,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     private var listLayers: [CALayer] = []
     
-    internal func updateListStyle() {
+    private func updateListStyle() {
         listLayers.forEach { $0.removeFromSuperlayer() }
         listLayers.removeAll()
         
@@ -373,6 +373,20 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateBlockquoteStyle()
             self.updateListStyle()
         })
+    }
+    
+    func toHeading(level: Int, lineRange: NSRange) {
+        let metadata = [
+            "level": level,
+        ]
+        let attributes: [NSAttributedString.Key: Any] = [
+            .blockID: UUID(),
+            .blockType: "heading",
+            .metadata: metadata,
+            .font: UIFont.systemFont(ofSize: self.editor.configuration.getHeadingSize(level: level)),
+        ]
+        // add attributes
+        self.textStorage.addAttributes(attributes, range: lineRange)
     }
     
     func toBlockquote(lineRange: NSRange) {
@@ -867,19 +881,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         switch blockType {
         case "heading":
             var fragments: [InlineTextFragment] = []
-            let font = content.attributes(at: 0, effectiveRange: nil)[.font] as! UIFont
-            let level: Int = {
-                switch font.pointSize {
-                    // TODO: Use rem instead of fixed size
-                case 32: return 1
-                case 24: return 2
-                case 18.72: return 3
-                case 16: return 4
-                case 13.28: return 5
-                case 10.72: return 6
-                default: return 4
-                }
-            }()
+            let attributes = content.attributes(at: 0, effectiveRange: nil)
+            let level = (attributes[.metadata] as! [String: Any])["level"] as! Int
             content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
                 let substring = content.attributedSubstring(from: range)
                 let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)

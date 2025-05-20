@@ -25,4 +25,16 @@ public struct RichTextEditorConfiguration {
         self.textColor = textColor
         self.backgroundColor = backgroundColor
     }
+    
+    func getHeadingSize(level: Int) -> CGFloat {
+        switch level {
+        case 1: return 2 * self.fontSize
+        case 2: return 1.5 * self.fontSize
+        case 3: return 1.17 * self.fontSize
+        case 4: return 1 * self.fontSize
+        case 5: return 0.83 * self.fontSize
+        case 6: return 0.67 * self.fontSize
+        default: return 1 * self.fontSize
+        }
+    }
 }

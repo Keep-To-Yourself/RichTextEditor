@@ -72,25 +72,13 @@ class RichTextActionButton: UIButton {
     
     private func updateAppearance() {
         if let title = self.title(for: .normal), !title.isEmpty {
-            self.setTitleColor(
-                isSelected ? (self.window?.tintColor ?? .systemBlue) : .label,
-                for: .normal
-            )
-            self.backgroundColor =
-            isSelected
-            ? (self.window?.tintColor ?? .systemBlue).withAlphaComponent(
-                0.15
-            ) : .clear
+            self.setTitleColor(isSelected ? (self.window?.tintColor ?? .systemBlue) : .label, for: .normal)
+            self.backgroundColor = isSelected ? (self.window?.tintColor ?? .systemBlue).withAlphaComponent(0.15) : .clear
             self.layer.cornerRadius = 5
             self.clipsToBounds = true
         } else if self.image(for: .normal) != nil {
-            self.tintColor =
-            isSelected ? (self.window?.tintColor ?? .systemBlue) : .label
-            self.backgroundColor =
-            isSelected
-            ? (self.window?.tintColor ?? .systemBlue).withAlphaComponent(
-                0.15
-            ) : .clear
+            self.tintColor = isSelected ? (self.window?.tintColor ?? .systemBlue) : .label
+            self.backgroundColor = isSelected ? (self.window?.tintColor ?? .systemBlue).withAlphaComponent(0.15) : .clear
             self.layer.cornerRadius = 5
             self.clipsToBounds = true
         }

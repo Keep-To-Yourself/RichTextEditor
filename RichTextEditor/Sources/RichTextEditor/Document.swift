@@ -79,10 +79,10 @@ public class Document: Codable {
         return blockquotes[id]
     }
     
-    public func toAttributedString() -> NSAttributedString {
+    public func toAttributedString(configuration: RichTextEditorConfiguration) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for (id, block) in blocks {
-            let attributedString = block.toAttributedString(document: self)
+            let attributedString = block.toAttributedString(document: self, configuration: configuration)
             let mutableAttributedString = NSMutableAttributedString(attributedString: attributedString)
             mutableAttributedString.addAttribute(.blockType, value: block.getType(), range: NSRange(location: 0, length: mutableAttributedString.length))
             mutableAttributedString.addAttribute(.blockID, value: id, range: NSRange(location: 0, length: mutableAttributedString.length))
@@ -111,7 +111,7 @@ enum Block: Codable {
         }
     }
     
-    func toAttributedString(document: Document) -> NSAttributedString {
+    func toAttributedString(document: Document, configuration: RichTextEditorConfiguration) -> NSAttributedString {
         let result = NSMutableAttributedString()
         switch self {
         case .paragraph(let content):
@@ -120,25 +120,13 @@ enum Block: Codable {
                 result.append(attributedString)
             }
         case .heading(let level, let content):
-            let fontSize: CGFloat = {
-                switch level {
-                    // TODO: Use rem instead of fixed size
-                case 1: return 32
-                case 2: return 24
-                case 3: return 18.72
-                case 4: return 16
-                case 5: return 13.28
-                case 6: return 10.72;
-                default: return 16
-                }
-            }()
-            let font = UIFont.systemFont(ofSize: fontSize, weight: .bold)
-            let headingMetadata: [String: Any] = ["level": level]
+            let font = UIFont.systemFont(ofSize: configuration.getHeadingSize(level: level), weight: .bold)
+            let metadata: [String: Any] = ["level": level]
             for fragment in content {
                 let attributedString = fragment.toAttributedString()
                 var attributes = attributedString.attributes(at: 0, effectiveRange: nil)
-                attributes[NSAttributedString.Key.font] = font
-                attributes[NSAttributedString.Key.metadata] = headingMetadata
+                attributes[.font] = font
+                attributes[.metadata] = metadata
                 let attributedFragment = NSAttributedString(string: fragment.text, attributes: attributes)
                 result.append(attributedFragment)
             }

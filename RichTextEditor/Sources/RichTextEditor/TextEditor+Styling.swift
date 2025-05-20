@@ -94,31 +94,17 @@ extension TextEditor {
             
             // Enumerate through the selected range. For each segment with a distinct font,
             // apply the transformation while preserving its original size and other non-conflicting traits.
-            self.textStorage.enumerateAttribute(
-                .font,
-                in: rangeToStyle,
-                options: []
-            ) { (value, subRange, stop) in
+            self.textStorage.enumerateAttribute(.font, in: rangeToStyle, options: []) { (value, subRange, stop) in
                 // Get the font for the current segment within the selection.
                 // If a segment unexpectedly has no font, default to a system font with the editor's configured default size.
-                let fontInSelectionSegment =
-                value as? UIFont
-                ?? UIFont.systemFont(
-                    ofSize: self.editor.configuration.fontSize
-                )
+                let fontInSelectionSegment = value as? UIFont ?? UIFont.systemFont(ofSize: self.editor.configuration.fontSize)
                 
                 // Apply the desired transformation (e.g., bold/italic toggle) to this specific font segment.
                 // This 'transform' closure comes from toggleBold() or toggleItalic() and knows how to add/remove the specific trait.
-                let transformedFontForSelectionSegment = transform(
-                    fontInSelectionSegment
-                )
+                let transformedFontForSelectionSegment = transform(fontInSelectionSegment)
                 
                 // Apply the newly transformed font back to this specific sub-range of the text storage.
-                self.textStorage.addAttribute(
-                    .font,
-                    value: transformedFontForSelectionSegment,
-                    range: subRange
-                )
+                self.textStorage.addAttribute(.font, value: transformedFontForSelectionSegment, range: subRange)
             }
             self.textStorage.endEditing()
         }
@@ -151,22 +137,11 @@ extension TextEditor {
         
         // Apply to the currently selected text, if any
         if selectedRange.length > 0 {
-            let currentAttribute = self.textStorage.attribute(
-                attributeKey,
-                at: selectedRange.location,
-                effectiveRange: nil
-            )
+            let currentAttribute = self.textStorage.attribute(attributeKey, at: selectedRange.location, effectiveRange: nil)
             if (currentAttribute as? NSNumber)?.isEqual(to: value as! NSNumber) ?? false {
-                self.textStorage.removeAttribute(
-                    attributeKey,
-                    range: selectedRange
-                )
+                self.textStorage.removeAttribute(attributeKey,range: selectedRange)
             } else {
-                self.textStorage.addAttribute(
-                    attributeKey,
-                    value: value,
-                    range: selectedRange
-                )
+                self.textStorage.addAttribute(attributeKey, value: value, range: selectedRange)
             }
         }
         
@@ -375,431 +350,130 @@ extension TextEditor {
         Toolbar.shared.updateButtonStates(basedOn: self.typingAttributes)
     }
     
-    internal func getAffectedParagraphRanges() -> [NSRange] {
-        let textStorageRef = self.textStorage
-        guard let fullTextNSString = textStorageRef.string as NSString? else {
-            return [NSRange(location: 0, length: 0)]
+    public func increaseIndent() {
+        if self.selectedRange.length != 0 {
+            return
         }
-        let currentSelectedRange = self.selectedRange
+        let fullText = self.textStorage.string as NSString
+        let lineRange = fullText.lineRange(for: NSRange(location: self.selectedRange.location, length: 0))
+        let attributes = self.textStorage.attributes(at: lineRange.location, effectiveRange: nil)
         
-        var affectedParagraphRanges: [NSRange] = []
+        let blockType = attributes[.blockType] as! String
         
-        if textStorageRef.length == 0 {
-            affectedParagraphRanges.append(NSRange(location: 0, length: 0))
-            return affectedParagraphRanges
-        }
-        
-        if currentSelectedRange.length == 0 {
-            let queryLocation = min(
-                currentSelectedRange.location,
-                textStorageRef.length
-            )
-            var paragraphRangeToQuery = NSRange(
-                location: queryLocation,
-                length: 0
-            )
+        switch blockType {
+        case "list":
+            var metadata = attributes[.metadata] as! [String: Any]
+            let level = metadata["level"] as! Int
+            let parentID = metadata["parentID"] as! UUID
+            let ordered = metadata["ordered"] as! Bool
             
-            if queryLocation == textStorageRef.length && queryLocation > 0 {
-                paragraphRangeToQuery.location = queryLocation - 1
+            if level < maxListLevel {
+                let newContent = ListContent(document: self.document, parentID: parentID, items: [], ordered: ordered)
+                let newLevel = level + 1
+                var newMetadata = metadata
+                newMetadata["level"] = newLevel
+                newMetadata["parentID"] = newContent.id
+                
+                self.textStorage.addAttributes([
+                    .metadata: metadata,
+                    .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
+                ], range: lineRange)
             }
+        case "blockquote":
+            guard let metadata = attributes[.metadata] as? [String: Any] else { return }
+            let level = metadata["level"] as! Int
+            let parentID = metadata["parentID"] as! UUID
+            let ordered = metadata["ordered"] as! Bool
             
-            if paragraphRangeToQuery.location < 0 {
-                paragraphRangeToQuery.location = 0
+            if level < maxListLevel {
+                let newContent = BlockquoteContent(document: self.document, parentID: parentID, items: [], ordered: ordered)
+                let newLevel = level + 1
+                var newMetadata = metadata
+                newMetadata["level"] = newLevel
+                newMetadata["parentID"] = newContent.id
+                
+                self.textStorage.addAttributes([
+                    .metadata: metadata,
+                    .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel)
+                ], range: lineRange)
             }
-            
-            affectedParagraphRanges.append(
-                fullTextNSString.paragraphRange(for: paragraphRangeToQuery)
-            )
-            
-        } else {
-            var currentPosition = currentSelectedRange.location
-            let selectionEndPosition = NSMaxRange(currentSelectedRange)
-            
-            while currentPosition < selectionEndPosition {
-                let paraRange = fullTextNSString.paragraphRange(
-                    for: NSRange(location: currentPosition, length: 0)
-                )
-                
-                if paraRange.location == NSNotFound {
-                    break
-                }
-                
-                if NSMaxRange(paraRange) > textStorageRef.length {
-                    affectedParagraphRanges.append(
-                        NSRange(
-                            location: paraRange.location,
-                            length: textStorageRef.length - paraRange.location
-                        )
-                    )
-                    break
-                }
-                
-                affectedParagraphRanges.append(paraRange)
-                
-                let nextPositionWillBe = NSMaxRange(paraRange)
-                
-                if nextPositionWillBe > currentPosition {
-                    currentPosition = nextPositionWillBe
-                } else {
-                    currentPosition += 1
-                }
-            }
-            
-            if !affectedParagraphRanges.isEmpty {
-                var uniqueRanges = Set<NSRange>()
-                affectedParagraphRanges.forEach { uniqueRanges.insert($0) }
-                affectedParagraphRanges = Array(uniqueRanges).sorted {
-                    $0.location < $1.location
-                }
-            }
+        default:
+            break
         }
-        
-        return affectedParagraphRanges.filter {
-            $0.location != NSNotFound && $0.length >= 0
-        }
-    }
-    
-    internal func updateTypingAttributesAndToolbar(at location: Int) {
-        var newTypingAttributes: [NSAttributedString.Key: Any]
-        let safeLocation = min(max(0, location), self.textStorage.length)
-        
-        if self.textStorage.length == 0 {
-            // 编辑器为空，设置默认的段落 typingAttributes
-            let defaultFontSize = self.editor.configuration.fontSize
-            newTypingAttributes = [
-                .font: UIFont.systemFont(ofSize: defaultFontSize),
-                .foregroundColor: self.editor.configuration.textColor,
-                .blockType: "paragraph",
-                .blockID: UUID(),
-            ]
-        } else if safeLocation == self.textStorage.length {
-            newTypingAttributes = self.textStorage.attributes(
-                at: max(0, safeLocation - 1),
-                effectiveRange: nil
-            )
-        } else {
-            newTypingAttributes = self.textStorage.attributes(
-                at: safeLocation,
-                effectiveRange: nil
-            )
-        }
-        
-        self.typingAttributes = newTypingAttributes
-        
         Toolbar.shared.updateButtonStates(basedOn: self.typingAttributes)
     }
     
-    public func increaseIndent() {
-        let affectedRanges = getAffectedParagraphRanges()
-        // 当前实现只处理第一个受影响的段落，如果需要处理多个，需要遍历 affectedRanges
-        guard let range = affectedRanges.first, range.location != NSNotFound, range.location <= self.textStorage.length else { return }
-        
-        let safeRange = NSRange(location: range.location,length: min(range.length, self.textStorage.length - range.location))
-        if safeRange.length < 0 { return }
-        
-        // 1. 获取当前段落的完整属性
-        let currentAttributes = self.textStorage.attributes(at: safeRange.location, effectiveRange: nil)
-        let blockType = currentAttributes[.blockType] as! String
-        
-        self.textStorage.beginEditing()
-        
-        switch blockType {
-        case "list":
-            var currentMetadata = currentAttributes[.metadata] as? [String: Any] ?? [:]
-            let currentLevel = currentMetadata["level"] as? Int ?? 0
-            
-            if currentLevel < maxListLevel {
-                let newLevel = currentLevel + 1
-                currentMetadata["level"] = newLevel
-                
-                // 使用 setAttributes，因为它基于 currentAttributes 构建，所以其他属性被保留
-                self.textStorage.addAttributes([
-                    .metadata: currentMetadata,
-                    .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
-                ], range: safeRange)
-            }
-        default:
-            self.textStorage.endEditing()  // 如果没有做任何修改，也需要 endEditing
-            return
-        }
-        
-        self.textStorage.endEditing()
-        self.updateTypingAttributesAndToolbar(at: safeRange.location)  // 或者更精确的光标位置
-    }
-    
     public func decreaseIndent() {
-        let affectedRanges = getAffectedParagraphRanges()
-        guard let range = affectedRanges.first, range.location != NSNotFound, range.location <= self.textStorage.length else { return }
+        if self.selectedRange.length != 0 {
+            return
+        }
+        let fullText = self.textStorage.string as NSString
+        let lineRange = fullText.lineRange(for: NSRange(location: self.selectedRange.location, length: 0))
+        let attributes = self.textStorage.attributes(at: lineRange.location, effectiveRange: nil)
         
-        let safeRange = NSRange(location: range.location, length: min(range.length, self.textStorage.length - range.location))
-        if safeRange.length < 0 { return }
-        
-        let currentAttributes = self.textStorage.attributes(at: safeRange.location,effectiveRange: nil)
-        let blockType = currentAttributes[.blockType] as! String
-        
-        self.textStorage.beginEditing()
+        let blockType = attributes[.blockType] as! String
         
         switch blockType {
         case "list":
-            var currentMetadata = currentAttributes[.metadata] as! [String: Any]
-            let currentLevel = currentMetadata["level"] as! Int
+            var metadata = attributes[.metadata] as! [String: Any]
+            let level = metadata["level"] as! Int
             
-            if currentLevel > 0 {
-                let newLevel = currentLevel - 1
-                currentMetadata["level"] = newLevel
+            if level > 0 {
+                let parentID = metadata["parentID"] as! UUID
+                let content = self.document.getList(parentID)!
+                
+                let newLevel = level - 1
+                var newMetadata = metadata
+                newMetadata["level"] = newLevel
+                newMetadata["parentID"] = content.parentID
+                
                 self.textStorage.addAttributes([
-                    .metadata: currentMetadata,
+                    .metadata: metadata,
                     .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
-                ], range: safeRange)
-            } else {
-                // currentLevel is 0, 转换为段落
-                // 移除列表特有的 .metadata 和 .paragraphStyle (缩进)
+                ], range: lineRange)
+            }
+        case "blockquote":
+            guard let metadata = attributes[.metadata] as? [String: Any] else { return }
+            let level = metadata["level"] as! Int
+            
+            if level > 1 {
+                let parentID = metadata["parentID"] as! UUID
+                let content = self.document.getList(parentID)!
                 
-                // remove the zero-width character
-                self.textStorage.replaceCharacters(in: NSRange(location: safeRange.location, length: 1), with: "")
+                let newLevel = level - 1
+                var newMetadata = metadata
+                newMetadata["level"] = newLevel
+                newMetadata["parentID"] = content.parentID
                 
                 self.textStorage.addAttributes([
-                    .blockType: "paragraph",
-                    .blockID: UUID()
-                ], range: safeRange)
-                self.textStorage.removeAttribute(.metadata, range: safeRange)
-                self.textStorage.removeAttribute(.paragraphStyle, range: safeRange)
+                    .metadata: metadata,
+                    .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel)
+                ], range: lineRange)
             }
         default:
-            self.textStorage.endEditing()
-            return
+            break
         }
-        
-        self.textStorage.endEditing()
-        
-        var locationForUpdate = safeRange.location
-        if blockType == "list" && (currentAttributes[.metadata] as? [String: Any])?["level"] as? Int == 0 {
-            locationForUpdate = self.selectedRange.location
-        }
-        self.updateTypingAttributesAndToolbar(at: locationForUpdate)
-    }
-    
-    private func headingFontSize(for level: Int, defaultSize: CGFloat) -> CGFloat {
-        switch level {
-        case 1: return 32
-        case 2: return 24
-        case 3: return 18.72
-        case 4: return 16
-        case 5: return 13.28
-        case 6: return 10.72
-        default: return 16
-        }
+        Toolbar.shared.updateButtonStates(basedOn: self.typingAttributes)
     }
     
     public func applyHeading(level: Int) {
-        let affectedRanges = getAffectedParagraphRanges()
-        guard !affectedRanges.isEmpty else {
-            if self.textStorage.length == 0 {
-                var newTypingAttributes = self.typingAttributes
-                newTypingAttributes[.blockType] = "heading"
-                newTypingAttributes[.metadata] = ["level": level]
-                newTypingAttributes[.blockID] =
-                newTypingAttributes[.blockID] ?? UUID()
-                newTypingAttributes.removeValue(forKey: .paragraphStyle)
-                
-                let fontSize = headingFontSize(
-                    for: level,
-                    defaultSize: self.editor.configuration.fontSize
-                )
-                var font = UIFont.systemFont(ofSize: fontSize)
-                if let descriptor = font.fontDescriptor.withSymbolicTraits(.traitBold) {
-                    font = UIFont(descriptor: descriptor, size: fontSize)
-                } else {
-                    font = UIFont.boldSystemFont(ofSize: fontSize)
-                }
-                newTypingAttributes[.font] = font
-                
-                self.typingAttributes = newTypingAttributes
-                Toolbar.shared.updateButtonStates(
-                    basedOn: self.typingAttributes
-                )
-            }
+        if self.selectedRange.length != 0 {
             return
         }
+        let fullText = self.textStorage.string as NSString
+        let lineRange = fullText.lineRange(for: NSRange(location: self.selectedRange.location, length: 0))
+        let attributes = self.textStorage.attributes(at: lineRange.location, effectiveRange: nil)
         
-        let defaultEditorFontSize = self.editor.configuration.fontSize
-        let newHeadingFontSize = headingFontSize(
-            for: level,
-            defaultSize: defaultEditorFontSize
-        )
+        let blockType = attributes[.blockType] as! String
         
-        self.textStorage.beginEditing()
-        
-        for range in affectedRanges.reversed() {
-            guard range.location != NSNotFound, range.location <= self.textStorage.length else { continue }
-            let safeInitialRange = NSRange(
-                location: range.location,
-                length: min(
-                    range.length,
-                    self.textStorage.length - range.location
-                )
-            )
-            if safeInitialRange.length < 0 { continue }
-            
-            let originalAttributes = self.textStorage.attributes(
-                at: safeInitialRange.location,
-                effectiveRange: nil
-            )
-            let originalBlockType = originalAttributes[.blockType] as? String
-            
-            var newBlockAttributes: [NSAttributedString.Key: Any] = [
-                .blockType: "heading",
-                .metadata: ["level": level] as [String: Any],
-                .blockID: originalAttributes[.blockID] ?? UUID(),
-            ]
-            
-            self.textStorage.removeAttribute(
-                .paragraphStyle,
-                range: safeInitialRange
-            )
-            
-            var currentRange = safeInitialRange
-            if (originalBlockType == "list" || originalBlockType == "blockquote") && currentRange.length > 0
-                && self.textStorage.attributedSubstring(from: NSRange(location: currentRange.location, length: 1)).string == "\u{200B}" {
-                self.textStorage.replaceCharacters(
-                    in: NSRange(location: currentRange.location, length: 1),
-                    with: ""
-                )
-            }
-            
-            self.textStorage.addAttributes(
-                newBlockAttributes,
-                range: currentRange
-            )
-            
-            let rangeForFontUpdate = currentRange
-            
-            self.textStorage.enumerateAttribute(
-                .font,
-                in: rangeForFontUpdate,
-                options: []
-            ) { (value, subRange, _) in
-                let existingFont =
-                value as? UIFont
-                ?? UIFont.systemFont(ofSize: newHeadingFontSize)
-                var newFont: UIFont
-                
-                var symbolicTraits = existingFont.fontDescriptor.symbolicTraits
-                symbolicTraits.insert(.traitBold)
-                
-                if let baseDescriptor = UIFont.systemFont(ofSize: newHeadingFontSize).fontDescriptor.withSymbolicTraits(symbolicTraits) {
-                    newFont = UIFont(
-                        descriptor: baseDescriptor,
-                        size: newHeadingFontSize
-                    )
-                } else {
-                    newFont = UIFont.boldSystemFont(ofSize: newHeadingFontSize)
-                }
-                self.textStorage.addAttribute(
-                    .font,
-                    value: newFont,
-                    range: subRange
-                )
-            }
+        switch blockType {
+        case "paragraph":
+            self.toHeading(level: level, lineRange: lineRange)
+        default:
+            break
         }
-        
-        self.textStorage.endEditing()
-        
-        let locationForUpdate =
-        affectedRanges.first?.location ?? self.selectedRange.location
-        self.updateTypingAttributesAndToolbar(at: locationForUpdate)
     }
     
     public func applyParagraph() {
-        let affectedRanges = getAffectedParagraphRanges()
-        guard !affectedRanges.isEmpty else {
-            if self.textStorage.length == 0 {
-                var newTypingAttributes = self.typingAttributes
-                newTypingAttributes[.blockType] = "paragraph"
-                newTypingAttributes[.blockID] =
-                newTypingAttributes[.blockID] ?? UUID()
-                newTypingAttributes.removeValue(forKey: .metadata)
-                newTypingAttributes.removeValue(forKey: .paragraphStyle)
-                let defaultFontSize = self.editor.configuration.fontSize
-                newTypingAttributes[.font] = UIFont.systemFont(ofSize: defaultFontSize)
-                self.typingAttributes = newTypingAttributes
-                Toolbar.shared.updateButtonStates(
-                    basedOn: self.typingAttributes
-                )
-            }
-            return
-        }
-        
-        let defaultFontSize = self.editor.configuration.fontSize
-        
-        self.textStorage.beginEditing()
-        
-        for range in affectedRanges.reversed() {
-            guard range.location != NSNotFound, range.location <= self.textStorage.length else { continue }
-            let safeInitialRange = NSRange(
-                location: range.location,
-                length: min(
-                    range.length,
-                    self.textStorage.length - range.location
-                )
-            )
-            if safeInitialRange.length < 0 { continue }
-            
-            let originalAttributes = self.textStorage.attributes(
-                at: safeInitialRange.location,
-                effectiveRange: nil
-            )
-            let originalBlockType = originalAttributes[.blockType] as? String
-            
-            var newBlockAttributes: [NSAttributedString.Key: Any] = [
-                .blockType: "paragraph",
-                .blockID: originalAttributes[.blockID] ?? UUID(),
-            ]
-            
-            self.textStorage.removeAttribute(.metadata, range: safeInitialRange)
-            self.textStorage.removeAttribute(.paragraphStyle, range: safeInitialRange)
-            
-            self.textStorage.addAttributes(newBlockAttributes, range: safeInitialRange)
-            
-            var currentRange = safeInitialRange
-            if (originalBlockType == "list" || originalBlockType == "blockquote") && currentRange.length > 0 && self.textStorage.attributedSubstring(from: NSRange(location: currentRange.location, length: 1)).string == "\u{200B}" {
-                self.textStorage.replaceCharacters(in: NSRange(location: currentRange.location, length: 1),with: "")
-            }
-            
-            let rangeForFontUpdate = safeInitialRange
-            
-            self.textStorage.enumerateAttribute(.font, in: rangeForFontUpdate,options: []) { value, subRange, _ in
-                if NSMaxRange(subRange) > self.textStorage.length || subRange.location >= self.textStorage.length {
-                    return
-                }
-                if subRange.length == 0 && !(subRange.location == self.textStorage.length && self.textStorage.length == 0) {
-                    return
-                }
-                
-                let existingFont = value as? UIFont ?? UIFont.systemFont(ofSize: defaultFontSize)
-                var newFont: UIFont
-                
-                var symbolicTraits = existingFont.fontDescriptor.symbolicTraits
-                
-                if originalBlockType == "heading" {
-                    symbolicTraits.remove(.traitBold)
-                }
-                
-                if let baseDescriptor = UIFont.systemFont(ofSize: defaultFontSize).fontDescriptor.withSymbolicTraits(symbolicTraits) {
-                    newFont = UIFont(descriptor: baseDescriptor,size: defaultFontSize)
-                } else {
-                    if symbolicTraits.isEmpty {
-                        newFont = UIFont.systemFont(ofSize: defaultFontSize)
-                    } else {
-                        newFont = UIFont(descriptor: existingFont.fontDescriptor.withSymbolicTraits(symbolicTraits) ?? UIFont.systemFont(ofSize: defaultFontSize).fontDescriptor, size: defaultFontSize)
-                    }
-                }
-                self.textStorage.addAttribute(.font, value: newFont, range: subRange)
-            }
-        }
-        
-        self.textStorage.endEditing()
-        let locationForUpdate = affectedRanges.first?.location ?? self.selectedRange.location
-        self.updateTypingAttributesAndToolbar(at: locationForUpdate)
     }
 }
