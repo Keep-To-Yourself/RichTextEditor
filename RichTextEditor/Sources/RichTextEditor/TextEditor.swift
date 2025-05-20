@@ -839,6 +839,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         let blockType = self.textStorage.attributes(at: blockRange!.location, effectiveRange: nil)[.blockType] as? String
         
         let content = self.textStorage.attributedSubstring(from: blockRange!)
+        let fullText = content.string as NSString
         
         var block: Block
         switch blockType {
@@ -875,13 +876,24 @@ class TextEditor: UITextView, UITextViewDelegate {
             let blockquoteContent = BlockquoteContent(document: self.document, parentID: nil, items: [])
             
             var contents: [UUID: BlockquoteContent] = [:]
-            content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
-                let substring = content.attributedSubstring(from: range)
-                let metadata = attributes[.metadata] as? [String: Any]
+            content.enumerateAttribute(.metadata, in: NSRange(location: 0, length: content.length), options: []) { value, itemRange, _ in
+                let item = content.attributedSubstring(from: itemRange)
+                
+                let fragments: [InlineTextFragment] = {
+                    var localFragments: [InlineTextFragment] = []
+                    item.enumerateAttributes(in: NSRange(location: 0, length: item.length), options: []) { substringAttribute, substringRange, _ in
+                        let substring = item.attributedSubstring(from: substringRange)
+                        let text = substring.string.replacingOccurrences(of: "\u{200B}", with: "")
+                        let fragment = self.toInlineTextFragment(text, attributes: substringAttribute)
+                        localFragments.append(fragment)
+                    }
+                    return localFragments
+                }()
+                
+                let metadata = value as? [String: Any]
                 if metadata == nil {
                     // default content in blockquote
-                    let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
-                    blockquoteContent.items.append(.text(content: [fragment]))
+                    blockquoteContent.items.append(.text(content: fragments))
                 } else {
                     let id = metadata!["id"] as! UUID
                     let parentID = metadata!["parentID"] as! UUID
@@ -896,44 +908,52 @@ class TextEditor: UITextView, UITextViewDelegate {
                             // This must be updated when increasing/decreasing indent
                             contentParentID = self.document.getBlockquote(parentID)!.parentID!
                         }
-                        contents[parentID] = BlockquoteContent(document: self.document, parentID: contentParentID, items: [])
+                        contents[parentID] = BlockquoteContent(document: self.document, parentID: contentParentID, items: [], ordered: ordered)
                         blockquoteContent.items.append(.list(content: contents[parentID]!))
                     }
                     let currentContent = contents[parentID]!
                     
-                    let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
-                    currentContent.items.append(.text(content: [fragment]))
+                    currentContent.items.append(.text(content: fragments))
                 }
             }
             block = .blockquote(content: blockquoteContent)
         case "list":
-            let listContent = ListContent(document: self.document, parentID: nil, items: [])
+            var listContent = ListContent(document: self.document, parentID: nil, items: [])
             
             var contents: [UUID: ListContent] = [:]
-            content.enumerateAttributes(in: NSRange(location: 0, length: content.length), options: []) { attributes, range, _ in
-                let substring = content.attributedSubstring(from: range)
-                let metadata = attributes[.metadata] as? [String: Any]
+            content.enumerateAttribute(.metadata, in: NSRange(location: 0, length: content.length), options: []) { value, itemRange, _ in
+                let item = content.attributedSubstring(from: itemRange)
                 
-                let id = metadata!["id"] as! UUID
-                let parentID = metadata!["parentID"] as! UUID
-                let level = metadata!["level"] as! Int
-                let ordered = metadata!["ordered"] as! Bool
+                let metadata = value as! [String: Any]
+                let id = metadata["id"] as! UUID
+                let parentID = metadata["parentID"] as! UUID
+                let level = metadata["level"] as! Int
+                let ordered = metadata["ordered"] as! Bool
                 
-                if contents[parentID] == nil {
-                    let contentParentID: UUID?
-                    if level == 0 {
-                        contentParentID = nil
-                    } else {
+                let fragments: [InlineTextFragment] = {
+                    var localFragments: [InlineTextFragment] = []
+                    item.enumerateAttributes(in: NSRange(location: 0, length: item.length), options: []) { substringAttribute, substringRange, _ in
+                        let substring = item.attributedSubstring(from: substringRange)
+                        let text = substring.string.replacingOccurrences(of: "\u{200B}", with: "")
+                        let fragment = self.toInlineTextFragment(text, attributes: substringAttribute)
+                        localFragments.append(fragment)
+                    }
+                    return localFragments
+                }()
+                if level == 0 {
+                    listContent.items.append(.text(content: fragments))
+                    listContent.ordered = ordered
+                } else {
+                    if contents[parentID] == nil {
+                        let contentParentID: UUID?
                         // This must be updated when increasing/decreasing indent
                         contentParentID = self.document.getList(parentID)!.parentID!
+                        contents[parentID] = ListContent(document: self.document, id: parentID, parentID: contentParentID, items: [], ordered: ordered)
+                        listContent.items.append(.list(content: contents[parentID]!))
                     }
-                    contents[parentID] = ListContent(document: self.document, parentID: contentParentID, items: [])
-                    listContent.items.append(.list(content: contents[parentID]!))
+                    let currentContent = contents[parentID]!
+                    currentContent.items.append(.text(content: fragments))
                 }
-                let currentContent = contents[parentID]!
-                
-                let fragment = self.toInlineTextFragment(substring.string, attributes: attributes)
-                currentContent.items.append(.text(content: [fragment]))
             }
             block = .list(content: listContent)
         default:

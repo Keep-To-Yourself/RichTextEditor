@@ -155,13 +155,20 @@ public class RichTextEditor: UIView {
 				parentID: listContent.id,
 				items: [
 					.text(content: [
-						InlineTextFragment(
-							text: "嵌套列表\n",
-							isBold: false,
-							isItalic: false,
-							isUnderline: false,
-							textColor: nil
-						)
+                        InlineTextFragment(
+                            text: "嵌套列表\n",
+                            isBold: false,
+                            isItalic: false,
+                            isUnderline: false,
+                            textColor: nil
+                        ),
+                        InlineTextFragment(
+                            text: "嵌套\n列表",
+                            isBold: false,
+                            isItalic: false,
+                            isUnderline: false,
+                            textColor: nil
+                        )
 					])
 				],
 				ordered: true

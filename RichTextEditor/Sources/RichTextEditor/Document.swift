@@ -18,7 +18,7 @@ public class Document: Codable {
     var blocks: OrderedDictionary<UUID, Block>
     
     private var blockquotes: [UUID: BlockquoteContent] = [:]
-    var lists: [UUID: ListContent] = [:]
+    private var lists: [UUID: ListContent] = [:]
     
     enum CodingKeys: String, CodingKey {
         case blocks
@@ -193,7 +193,7 @@ class BlockquoteContent: Codable {
                 if level != 0 {
                     let metadata: [String: Any] = [
                         "level": level,
-                        "ordered": ordered,
+                        "ordered": self.ordered,
                         "id": UUID(),
                         "parentID": self.id,
                     ]
@@ -259,7 +259,7 @@ class ListContent: Codable {
                 }
                 let metadata: [String: Any] = [
                     "level": level,
-                    "ordered": ordered,
+                    "ordered": self.ordered,
                     "id": UUID(),
                     "parentID": self.id,
                 ]
