@@ -688,7 +688,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                 attributes = self.textStorage.attributes(at: range.location - 1, effectiveRange: nil)
             } else {
                 // 光标在空文档中，使用默认样式
-                 attributes = [
+                attributes = [
                     .blockID: UUID(),
                     .blockType: "paragraph",
                     .font: UIFont.systemFont(ofSize: 16),
@@ -870,7 +870,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             let font = content.attributes(at: 0, effectiveRange: nil)[.font] as! UIFont
             let level: Int = {
                 switch font.pointSize {
-                // TODO: Use rem instead of fixed size
+                    // TODO: Use rem instead of fixed size
                 case 32: return 1
                 case 24: return 2
                 case 18.72: return 3
