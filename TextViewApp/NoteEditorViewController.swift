@@ -107,10 +107,11 @@ class NoteEditorViewController: UIViewController {
     @objc private func backButtonTapped() {
         if self.note == nil {
             NoteStore.shared.addNote(Note(
-                title: "标题",
+                title: self.richTextEditor.getDocument().getTitle() ?? "无标题",
                 content: self.richTextEditor.getDocument()
             ))
         } else {
+            self.note!.title = self.richTextEditor.getDocument().getTitle() ?? "无标题"
             NoteStore.shared.updateNote(self.note!)
         }
         self.dismiss(animated: true)

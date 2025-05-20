@@ -534,6 +534,9 @@ class TextEditor: UITextView, UITextViewDelegate {
         if text.isEmpty {
             // 删除文字
             let deletedContent = self.textStorage.attributedSubstring(from: range)
+            if deletedContent.length == 0 {
+                return true
+            }
             let deletedText = deletedContent.string
             let attributes = deletedContent.attributes(at: 0, effectiveRange: nil)
             let blockID = attributes[.blockID] as! UUID

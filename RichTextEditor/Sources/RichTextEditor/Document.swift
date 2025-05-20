@@ -79,6 +79,19 @@ public class Document: Codable {
         return blockquotes[id]
     }
     
+    public func getTitle() -> String? {
+        if blocks.isEmpty {
+            return nil
+        }
+        let first = blocks.values.first!
+        if first.getType() == "heading" {
+            if case .heading(_, let content) = first {
+                return content.map { $0.text }.joined()
+            }
+        }
+        return nil
+    }
+    
     public func toAttributedString(configuration: RichTextEditorConfiguration) -> NSAttributedString {
         let result = NSMutableAttributedString()
         for (id, block) in blocks {
