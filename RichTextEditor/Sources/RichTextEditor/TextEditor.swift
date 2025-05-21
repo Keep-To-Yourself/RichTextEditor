@@ -22,6 +22,9 @@ class TextEditor: UITextView, UITextViewDelegate {
         self.textStorage.setAttributedString(document.toAttributedString(configuration: self.editor.configuration))
         self.autocapitalizationType = .none
         self.autocorrectionType = .no
+        self.smartDashesType = .no
+        self.smartQuotesType = .no
+        self.smartInsertDeleteType = .no
     }
     
     required init?(coder: NSCoder) {
@@ -82,7 +85,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     private var blockquoteLayers: [CALayer] = []
     
-    private func updateBlockquoteStyle() {
+    func updateBlockquoteStyle() {
         // 删除所有旧图层
         blockquoteLayers.forEach { $0.removeFromSuperlayer() }
         blockquoteLayers.removeAll()
@@ -200,7 +203,7 @@ class TextEditor: UITextView, UITextViewDelegate {
     
     private var listLayers: [CALayer] = []
     
-    private func updateListStyle() {
+    func updateListStyle() {
         listLayers.forEach { $0.removeFromSuperlayer() }
         listLayers.removeAll()
         
@@ -378,6 +381,8 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateDocument(blockID: id, index: index! + 1)
             self.updateDocument(blockID: newBlockID, index: index! + 2)
         }
+        
+        self.updateBlockquoteStyle()
     }
     
     func removeListItemInBlockquote(itemRange: NSRange) {
@@ -451,6 +456,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         // update document
         self.updateDocument(blockID: blockID)
+        
+        self.updateBlockquoteStyle()
     }
     
     func removeListItem(itemRange: NSRange) {
@@ -525,6 +532,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateDocument(blockID: id, index: index! + 1)
             self.updateDocument(blockID: newBlockID, index: index! + 2)
         }
+        self.updateListStyle()
     }
     
     func toHeading(level: Int, lineRange: NSRange) {
@@ -546,8 +554,19 @@ class TextEditor: UITextView, UITextViewDelegate {
             .metadata: metadata,
             .font: UIFont.systemFont(ofSize: self.editor.configuration.getHeadingSize(level: level)).withTraits(traits: .traitBold),
         ]
-        // add attributes
-        self.textStorage.addAttributes(attributes, range: lineRange)
+        
+        if lineRange.length == 0 {
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: lineRange)
+        } else {
+            let currAttribute = self.textStorage.attributes(at: lineRange.location, effectiveRange: nil)
+            let currBlockID = currAttribute[.blockID] as! UUID
+            
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: lineRange)
+            self.updateDocument(blockID: currBlockID)
+        }
+        
         self.updateDocument(blockID: id, index: index)
     }
     
@@ -567,11 +586,25 @@ class TextEditor: UITextView, UITextViewDelegate {
             .paragraphStyle: BlockquoteContent.getParagraphStyle(level: 0),
             .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
         ]
-        let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
-        // add attributes
-        self.textStorage.addAttributes(attributes, range: lineRange)
-        // insert the zero-width character
-        self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
+        
+        if lineRange.length == 0 {
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: lineRange)
+            // insert the zero-width character
+            self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
+        } else {
+            let currAttribute = self.textStorage.attributes(at: lineRange.location, effectiveRange: nil)
+            let currBlockID = currAttribute[.blockID] as! UUID
+            
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: lineRange)
+            // insert the zero-width character
+            self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
+            
+            self.updateDocument(blockID: currBlockID)
+        }
         self.updateDocument(blockID: id, index: index)
         self.updateBlockquoteStyle()
     }
@@ -681,25 +714,34 @@ class TextEditor: UITextView, UITextViewDelegate {
             index = self.document.blocks.index(forKey: prevBlockID)! + 1
         }
         
-        let currAttribute = self.textStorage.attributes(at: itemRange.location, effectiveRange: nil)
-        let currBlockID = currAttribute[.blockID] as! UUID
-        
-        // add attributes
-        self.textStorage.addAttributes(attributes, range: itemRange)
-        
-        // insert a zero-width character
-        let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
-        self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 0), with: zeroWidthCharacter)
-        
-        // update document
+        if itemRange.length == 0 {
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: itemRange)
+            
+            // insert a zero-width character
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 0), with: zeroWidthCharacter)
+            
+        } else {
+            let currAttribute = self.textStorage.attributes(at: itemRange.location, effectiveRange: nil)
+            let currBlockID = currAttribute[.blockID] as! UUID
+            
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: itemRange)
+            
+            // insert a zero-width character
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 0), with: zeroWidthCharacter)
+            
+            self.updateDocument(blockID: currBlockID)
+        }
         self.updateDocument(blockID: id, index: index)
-        self.updateDocument(blockID: currBlockID)
         self.updateListStyle()
     }
     
     var attributes: [NSAttributedString.Key: Any]?
     var range: NSRange?
-    var toUpdate: UUID?
+    var toUpdate: [UUID]?
     
     func textViewDidChange(_ textView: UITextView) {
         if self.markedTextRange != nil {
@@ -707,11 +749,15 @@ class TextEditor: UITextView, UITextViewDelegate {
         }
         guard let toUpdate = toUpdate else { return }
         
-        let attributedText = NSMutableAttributedString(attributedString: textView.attributedText)
-        attributedText.setAttributes(attributes!, range: range!)
-        textView.attributedText = attributedText
-        print(attributedText)
-        self.updateDocument(blockID: toUpdate)
+        if self.attributes != nil && self.range != nil {
+            let attributedText = NSMutableAttributedString(attributedString: textView.attributedText)
+            print(attributedText)
+            attributedText.setAttributes(attributes!, range: range!)
+            textView.attributedText = attributedText
+        }
+        for blockID in toUpdate {
+            self.updateDocument(blockID: blockID)
+        }
         self.toUpdate = nil
     }
     
@@ -720,10 +766,9 @@ class TextEditor: UITextView, UITextViewDelegate {
     }
     
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        if let markedRange = textView.markedTextRange, !markedRange.isEmpty {
-            return true
-        }
-        
+        self.attributes = nil
+        self.range = nil
+        self.toUpdate = nil
         let fullText = self.textStorage.string as NSString
         if text.isEmpty {
             // 删除文字
@@ -733,7 +778,11 @@ class TextEditor: UITextView, UITextViewDelegate {
             }
             let deletedText = deletedContent.string
             let attributes = deletedContent.attributes(at: 0, effectiveRange: nil)
-            let blockID = attributes[.blockID] as! UUID
+            let blockID = attributes[.blockID] as? UUID
+            guard let blockID = blockID else {
+                // probably using input method
+                return true
+            }
             let blockType = attributes[.blockType] as! String
             if deletedText == "\u{200B}" {
                 // 删除一个零宽字符
@@ -971,19 +1020,12 @@ class TextEditor: UITextView, UITextViewDelegate {
                     return false
                 }
             } else {
-                // delete characters
-                self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
-                // move cursor
-                self.selectedRange = NSRange(location: range.location, length: 0)
                 var ids: Set<UUID> = []
                 deletedContent.enumerateAttribute(.blockID, in: NSRange(location: 0, length: deletedContent.length), options: []) { value, r, _ in
                     guard let value = value as? UUID else { return }
                     ids.insert(value)
                 }
-                for id in ids {
-                    self.updateDocument(blockID: id)
-                }
-                return false
+                self.toUpdate = Array(ids)
             }
         } else {
             // 添加文字
@@ -992,8 +1034,15 @@ class TextEditor: UITextView, UITextViewDelegate {
                 // 光标在已有文字中，取当前位置属性
                 attributes = self.textStorage.attributes(at: range.location, effectiveRange: nil)
             } else if self.textStorage.length > 0 && range.location == self.textStorage.length {
-                // 光标在末尾但文档非空，继承最后一个字符属性
-                attributes = self.textStorage.attributes(at: range.location - 1, effectiveRange: nil)
+                // get line length
+                let fullText = self.textStorage.string as NSString
+                let lineRange = fullText.lineRange(for: NSRange(location: range.location, length: 0))
+                if lineRange.length == 0 {
+                    attributes = self.getDefaultAttribute()
+                } else {
+                    // 光标在末尾但文档非空，继承最后一个字符属性
+                    attributes = self.textStorage.attributes(at: range.location - 1, effectiveRange: nil)
+                }
             } else {
                 // 光标在空文档中，使用默认样式
                 attributes = self.getDefaultAttribute()
@@ -1013,20 +1062,23 @@ class TextEditor: UITextView, UITextViewDelegate {
                     let restRange = NSRange(location: range.location, length: lineRange.location + lineRange.length - range.location)
                     // add attributes
                     let id = UUID()
-                    self.textStorage.addAttributes([
+                    let newAttributes: [NSAttributedString.Key: Any] = [
                         .blockID: id,
                         .blockType: "paragraph",
                         .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
-                    ], range: restRange)
+                    ]
+                    self.textStorage.addAttributes(newAttributes, range: restRange)
                     
                     // insert linebreak
-                    let linebreak = NSAttributedString(string: "\n",attributes: attributes)
+                    let linebreak = NSAttributedString(string: "\n", attributes: attributes)
                     self.textStorage.replaceCharacters(in: range, with: linebreak)
                     // move cursor to the next line
                     self.selectedRange = NSRange(location: range.location + linebreak.length, length: 0)
                     // update document
                     self.updateDocument(blockID: blockID)
                     self.updateDocument(blockID: id, index: self.document.blocks.index(forKey: blockID)! + 1)
+                    // update typing attributes
+                    self.typingAttributes = newAttributes
                     return false
                 case "paragraph":
                     let linebreak = NSAttributedString(string: "\n", attributes: attributes)
@@ -1096,16 +1148,9 @@ class TextEditor: UITextView, UITextViewDelegate {
                 }
                 return false
             } else {
-//                // 添加其它文字
-//                let styled = NSAttributedString(string: text, attributes: attributes)
-//                self.textStorage.replaceCharacters(in: range, with: styled)
-//                let newPosition = range.location + styled.length
-//                self.selectedRange = NSRange(location: newPosition, length: 0)
-//                self.updateDocument(blockID: blockID)
-//                return false
                 self.attributes = attributes
                 self.range = NSRange(location: range.location, length: text.utf16.count)
-                self.toUpdate = blockID
+                self.toUpdate = [blockID]
             }
         }
         return true
@@ -1137,8 +1182,6 @@ class TextEditor: UITextView, UITextViewDelegate {
             let lineRange = fullText.lineRange(for: NSRange(location: cursor, length: 0))
             if lineRange.length != 0 && cursor == lineRange.location {
                 if cursor != self.textStorage.length && self.textStorage.attributedSubstring(from: NSRange(location: cursor, length: 1)).string == "\u{200B}" {
-                    print(previousSelectedRange!.location)
-                    print(cursor)
                     if previousSelectedRange != nil && previousSelectedRange!.location == cursor + 1 {
                         let newPosition = max(1, cursor - 1)
                         self.selectedRange = NSRange(location: newPosition, length: 0)
