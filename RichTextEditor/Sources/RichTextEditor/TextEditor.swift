@@ -21,6 +21,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         self.textStorage.setAttributedString(document.toAttributedString(configuration: self.editor.configuration))
         self.autocapitalizationType = .none
+        self.autocorrectionType = .no
     }
     
     required init?(coder: NSCoder) {
@@ -680,6 +681,9 @@ class TextEditor: UITextView, UITextViewDelegate {
             index = self.document.blocks.index(forKey: prevBlockID)! + 1
         }
         
+        let currAttribute = self.textStorage.attributes(at: itemRange.location, effectiveRange: nil)
+        let currBlockID = currAttribute[.blockID] as! UUID
+        
         // add attributes
         self.textStorage.addAttributes(attributes, range: itemRange)
         
@@ -689,10 +693,37 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         // update document
         self.updateDocument(blockID: id, index: index)
+        self.updateDocument(blockID: currBlockID)
         self.updateListStyle()
     }
     
+    var attributes: [NSAttributedString.Key: Any]?
+    var range: NSRange?
+    var toUpdate: UUID?
+    
+    func textViewDidChange(_ textView: UITextView) {
+        if self.markedTextRange != nil {
+            return
+        }
+        guard let toUpdate = toUpdate else { return }
+        
+        let attributedText = NSMutableAttributedString(attributedString: textView.attributedText)
+        attributedText.setAttributes(attributes!, range: range!)
+        textView.attributedText = attributedText
+        print(attributedText)
+        self.updateDocument(blockID: toUpdate)
+        self.toUpdate = nil
+    }
+    
+    func textViewDidBeginEditing(_ textView: UITextView) {
+        self.typingAttributes = self.getDefaultAttribute()
+    }
+    
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if let markedRange = textView.markedTextRange, !markedRange.isEmpty {
+            return true
+        }
+        
         let fullText = self.textStorage.string as NSString
         if text.isEmpty {
             // 删除文字
@@ -965,12 +996,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                 attributes = self.textStorage.attributes(at: range.location - 1, effectiveRange: nil)
             } else {
                 // 光标在空文档中，使用默认样式
-                attributes = [
-                    .blockID: UUID(),
-                    .blockType: "paragraph",
-                    .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
-                    .foregroundColor: UIColor.label,
-                ]
+                attributes = self.getDefaultAttribute()
             }
             
             let blockID = attributes[.blockID] as! UUID
@@ -1070,13 +1096,16 @@ class TextEditor: UITextView, UITextViewDelegate {
                 }
                 return false
             } else {
-                // 添加其它文字
-                let styled = NSAttributedString(string: text, attributes: attributes)
-                self.textStorage.replaceCharacters(in: range, with: styled)
-                let newPosition = range.location + styled.length
-                self.selectedRange = NSRange(location: newPosition, length: 0)
-                self.updateDocument(blockID: blockID)
-                return false
+//                // 添加其它文字
+//                let styled = NSAttributedString(string: text, attributes: attributes)
+//                self.textStorage.replaceCharacters(in: range, with: styled)
+//                let newPosition = range.location + styled.length
+//                self.selectedRange = NSRange(location: newPosition, length: 0)
+//                self.updateDocument(blockID: blockID)
+//                return false
+                self.attributes = attributes
+                self.range = NSRange(location: range.location, length: text.utf16.count)
+                self.toUpdate = blockID
             }
         }
         return true
@@ -1098,18 +1127,12 @@ class TextEditor: UITextView, UITextViewDelegate {
             newTypingAttributes = self.textStorage.attributes(at: cursor - 1, effectiveRange: nil)
         } else {
             // 光标在空文档中，使用默认样式
-            newTypingAttributes = [
-                .blockID: UUID(),
-                .blockType: "paragraph",
-                .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
-                .foregroundColor: UIColor.label,
-            ]
+            newTypingAttributes = self.getDefaultAttribute()
         }
         self.typingAttributes = newTypingAttributes
         // 通知 toolbar 更新按钮状态
         Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
         if self.selectedRange.length == 0 {
-            print("A")
             let fullText = self.textStorage.string as NSString
             let lineRange = fullText.lineRange(for: NSRange(location: cursor, length: 0))
             if lineRange.length != 0 && cursor == lineRange.location {
@@ -1139,7 +1162,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             stop.pointee = true
             blockRange = range
         }
-        if blockRange == nil {
+        if blockRange == nil || blockRange!.length == 0 {
             self.document.blocks.removeValue(forKey: blockID)
             return
         }
@@ -1271,5 +1294,14 @@ class TextEditor: UITextView, UITextViewDelegate {
         let textColor = attributes[.foregroundColor] as? UIColor
         let fragment = InlineTextFragment(text: string, isBold: isBold, isItalic: isItalic, isUnderline: isUnderline, textColor: textColor)
         return fragment
+    }
+    
+    private func getDefaultAttribute() -> [NSAttributedString.Key: Any] {
+        return [
+            .blockID: UUID(),
+            .blockType: "paragraph",
+            .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
+            .foregroundColor: UIColor.label,
+        ]
     }
 }
