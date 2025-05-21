@@ -290,7 +290,6 @@ class InlineTextFragment: Codable {
     var isUnderline: Bool
     var textColor: UIColor?
     
-    
     enum CodingKeys: String, CodingKey {
         case text, isBold, isItalic, isUnderline
         case red, green, blue, alpha
