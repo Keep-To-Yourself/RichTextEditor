@@ -564,6 +564,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             .blockID: id,
             .blockType: "blockquote",
             .paragraphStyle: BlockquoteContent.getParagraphStyle(level: 0),
+            .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
         ]
         let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
         // add attributes
@@ -571,6 +572,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         // insert the zero-width character
         self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
         self.updateDocument(blockID: id, index: index)
+        self.updateBlockquoteStyle()
     }
     
     func toBlockquoteListItem(itemRange: NSRange, ordered: Bool) {
@@ -597,7 +599,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                     .blockID: blockID,
                     .blockType: "blockquote",
                     .metadata: [
-                        "id": metadata!["id"]!,
+                        "id": UUID(),
                         "level": level,
                         "ordered": ordered,
                         "parentID": metadata!["parentID"]!
@@ -619,6 +621,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             ], range: itemRange)
         }
         self.updateDocument(blockID: blockID)
+        self.updateBlockquoteStyle()
     }
     
     func toListItem(itemRange: NSRange, ordered: Bool) {
@@ -637,6 +640,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                     "parentID": UUID()
                 ],
                 .paragraphStyle: ListContent.getParagraphStyle(level: 0),
+                .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
             ]
             index = 0
         } else {
@@ -656,6 +660,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         "parentID": metadata!["parentID"] as! UUID
                     ],
                     .paragraphStyle: ListContent.getParagraphStyle(level: 0),
+                    .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
                 ]
             } else {
                 id = UUID()
@@ -669,6 +674,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                         "parentID": UUID()
                     ],
                     .paragraphStyle: ListContent.getParagraphStyle(level: 0),
+                    .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
                 ]
             }
             index = self.document.blocks.index(forKey: prevBlockID)! + 1
@@ -683,6 +689,7 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         // update document
         self.updateDocument(blockID: id, index: index)
+        self.updateListStyle()
     }
     
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
@@ -929,10 +936,14 @@ class TextEditor: UITextView, UITextViewDelegate {
                     // move cursor
                     self.selectedRange = NSRange(location: range.location, length: 0)
                     // update document
-                    updateDocument(blockID: blockID)
+                    self.updateDocument(blockID: blockID)
                     return false
                 }
             } else {
+                // delete characters
+                self.textStorage.replaceCharacters(in: range, with: NSAttributedString())
+                // move cursor
+                self.selectedRange = NSRange(location: range.location, length: 0)
                 var ids: Set<UUID> = []
                 deletedContent.enumerateAttribute(.blockID, in: NSRange(location: 0, length: deletedContent.length), options: []) { value, r, _ in
                     guard let value = value as? UUID else { return }
@@ -941,6 +952,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                 for id in ids {
                     self.updateDocument(blockID: id)
                 }
+                return false
             }
         } else {
             // 添加文字
@@ -1097,10 +1109,13 @@ class TextEditor: UITextView, UITextViewDelegate {
         // 通知 toolbar 更新按钮状态
         Toolbar.shared.updateButtonStates(basedOn: newTypingAttributes)
         if self.selectedRange.length == 0 {
+            print("A")
             let fullText = self.textStorage.string as NSString
             let lineRange = fullText.lineRange(for: NSRange(location: cursor, length: 0))
             if lineRange.length != 0 && cursor == lineRange.location {
-                if cursor != self.textStorage.length - 1 && self.textStorage.attributedSubstring(from: NSRange(location: cursor, length: 1)).string == "\u{200B}" {
+                if cursor != self.textStorage.length && self.textStorage.attributedSubstring(from: NSRange(location: cursor, length: 1)).string == "\u{200B}" {
+                    print(previousSelectedRange!.location)
+                    print(cursor)
                     if previousSelectedRange != nil && previousSelectedRange!.location == cursor + 1 {
                         let newPosition = max(1, cursor - 1)
                         self.selectedRange = NSRange(location: newPosition, length: 0)
@@ -1189,7 +1204,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                             // This must be updated when increasing/decreasing indent
                             contentParentID = self.document.getBlockquote(parentID)!.parentID!
                         }
-                        contents[parentID] = BlockquoteContent(document: self.document, parentID: contentParentID, items: [], ordered: ordered)
+                        contents[parentID] = BlockquoteContent(document: self.document, id: parentID, parentID: contentParentID, items: [], ordered: ordered)
                         blockquoteContent.items.append(.list(content: contents[parentID]!))
                     }
                     let currentContent = contents[parentID]!

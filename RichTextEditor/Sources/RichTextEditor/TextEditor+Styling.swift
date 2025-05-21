@@ -163,6 +163,12 @@ extension TextEditor {
         
         if start == end {
             let lineRange = fullText.lineRange(for: NSRange(location: start, length: 0))
+            if lineRange.length == 0 {
+                self.toBlockquote(lineRange: lineRange)
+                self.selectedRange = NSRange(location: start + 1, length: 0)
+                Toolbar.shared.updateButtonStates(basedOn: self.typingAttributes)
+                return
+            }
             let line = self.textStorage.attributedSubstring(from: lineRange)
             
             let blockType = line.attribute(.blockType, at: 0, effectiveRange: nil) as! String
@@ -276,6 +282,13 @@ extension TextEditor {
         
         if start == end {
             let lineRange = fullText.lineRange(for: NSRange(location: start, length: 0))
+            if lineRange.length == 0 {
+                self.toListItem(itemRange: lineRange, ordered: targetOrderedState)
+                // move cursor
+                self.selectedRange = NSRange(location: start + 1, length: 0)
+                Toolbar.shared.updateButtonStates(basedOn: self.typingAttributes)
+                return
+            }
             let line = self.textStorage.attributedSubstring(from: lineRange)
             
             let blockType = line.attribute(.blockType, at: 0, effectiveRange: nil) as! String
