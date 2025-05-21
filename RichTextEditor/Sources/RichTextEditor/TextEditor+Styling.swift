@@ -380,7 +380,7 @@ extension TextEditor {
             let parentID = metadata["parentID"] as! UUID
             let ordered = metadata["ordered"] as! Bool
             
-            if level < maxListLevel {
+            if level + 1 < maxListLevel {
                 let newContent = ListContent(document: self.document, parentID: parentID, items: [], ordered: ordered)
                 let newLevel = level + 1
                 var newMetadata = metadata
@@ -388,7 +388,7 @@ extension TextEditor {
                 newMetadata["parentID"] = newContent.id
                 
                 self.textStorage.addAttributes([
-                    .metadata: metadata,
+                    .metadata: newMetadata,
                     .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
                 ], range: lineRange)
             }
@@ -398,7 +398,7 @@ extension TextEditor {
             let parentID = metadata["parentID"] as! UUID
             let ordered = metadata["ordered"] as! Bool
             
-            if level < maxListLevel {
+            if level + 1 < maxListLevel {
                 let newContent = BlockquoteContent(document: self.document, parentID: parentID, items: [], ordered: ordered)
                 let newLevel = level + 1
                 var newMetadata = metadata
@@ -406,7 +406,7 @@ extension TextEditor {
                 newMetadata["parentID"] = newContent.id
                 
                 self.textStorage.addAttributes([
-                    .metadata: metadata,
+                    .metadata: newMetadata,
                     .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel)
                 ], range: lineRange)
             }
@@ -441,7 +441,7 @@ extension TextEditor {
                 newMetadata["parentID"] = content.parentID
                 
                 self.textStorage.addAttributes([
-                    .metadata: metadata,
+                    .metadata: newMetadata,
                     .paragraphStyle: ListContent.getParagraphStyle(level: newLevel)
                 ], range: lineRange)
             }
@@ -459,7 +459,7 @@ extension TextEditor {
                 newMetadata["parentID"] = content.parentID
                 
                 self.textStorage.addAttributes([
-                    .metadata: metadata,
+                    .metadata: newMetadata,
                     .paragraphStyle: BlockquoteContent.getParagraphStyle(level: newLevel)
                 ], range: lineRange)
             }
