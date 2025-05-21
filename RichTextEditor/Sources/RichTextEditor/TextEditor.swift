@@ -378,6 +378,8 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateDocument(blockID: id, index: index! + 1)
             self.updateDocument(blockID: newBlockID, index: index! + 2)
         }
+        
+        self.updateBlockquoteStyle()
     }
     
     func removeListItemInBlockquote(itemRange: NSRange) {
@@ -451,6 +453,8 @@ class TextEditor: UITextView, UITextViewDelegate {
         
         // update document
         self.updateDocument(blockID: blockID)
+        
+        self.updateBlockquoteStyle()
     }
     
     func removeListItem(itemRange: NSRange) {
@@ -525,6 +529,7 @@ class TextEditor: UITextView, UITextViewDelegate {
             self.updateDocument(blockID: id, index: index! + 1)
             self.updateDocument(blockID: newBlockID, index: index! + 2)
         }
+        self.updateListStyle()
     }
     
     func toHeading(level: Int, lineRange: NSRange) {
@@ -567,11 +572,25 @@ class TextEditor: UITextView, UITextViewDelegate {
             .paragraphStyle: BlockquoteContent.getParagraphStyle(level: 0),
             .font: UIFont.systemFont(ofSize: self.editor.configuration.fontSize),
         ]
-        let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
-        // add attributes
-        self.textStorage.addAttributes(attributes, range: lineRange)
-        // insert the zero-width character
-        self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
+        
+        if lineRange.length == 0 {
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: lineRange)
+            // insert the zero-width character
+            self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
+        } else {
+            let currAttribute = self.textStorage.attributes(at: lineRange.location, effectiveRange: nil)
+            let currBlockID = currAttribute[.blockID] as! UUID
+            
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: lineRange)
+            // insert the zero-width character
+            self.textStorage.replaceCharacters(in: NSRange(location: lineRange.location, length: 0), with: zeroWidthCharacter)
+            
+            self.updateDocument(blockID: currBlockID)
+        }
         self.updateDocument(blockID: id, index: index)
         self.updateBlockquoteStyle()
     }
@@ -681,19 +700,28 @@ class TextEditor: UITextView, UITextViewDelegate {
             index = self.document.blocks.index(forKey: prevBlockID)! + 1
         }
         
-        let currAttribute = self.textStorage.attributes(at: itemRange.location, effectiveRange: nil)
-        let currBlockID = currAttribute[.blockID] as! UUID
-        
-        // add attributes
-        self.textStorage.addAttributes(attributes, range: itemRange)
-        
-        // insert a zero-width character
-        let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
-        self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 0), with: zeroWidthCharacter)
-        
-        // update document
+        if itemRange.length == 0 {
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: itemRange)
+            
+            // insert a zero-width character
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 0), with: zeroWidthCharacter)
+            
+        } else {
+            let currAttribute = self.textStorage.attributes(at: itemRange.location, effectiveRange: nil)
+            let currBlockID = currAttribute[.blockID] as! UUID
+            
+            // add attributes
+            self.textStorage.addAttributes(attributes, range: itemRange)
+            
+            // insert a zero-width character
+            let zeroWidthCharacter = NSAttributedString(string: "\u{200B}", attributes: attributes)
+            self.textStorage.replaceCharacters(in: NSRange(location: itemRange.location, length: 0), with: zeroWidthCharacter)
+            
+            self.updateDocument(blockID: currBlockID)
+        }
         self.updateDocument(blockID: id, index: index)
-        self.updateDocument(blockID: currBlockID)
         self.updateListStyle()
     }
     
@@ -1096,13 +1124,6 @@ class TextEditor: UITextView, UITextViewDelegate {
                 }
                 return false
             } else {
-//                // 添加其它文字
-//                let styled = NSAttributedString(string: text, attributes: attributes)
-//                self.textStorage.replaceCharacters(in: range, with: styled)
-//                let newPosition = range.location + styled.length
-//                self.selectedRange = NSRange(location: newPosition, length: 0)
-//                self.updateDocument(blockID: blockID)
-//                return false
                 self.attributes = attributes
                 self.range = NSRange(location: range.location, length: text.utf16.count)
                 self.toUpdate = blockID
