@@ -233,9 +233,7 @@ class TextEditor: UITextView, UITextViewDelegate {
                     index[parentID] = subIndex
                 }
                 
-                let style = ordered ? getOrderedListStyle(level: level, index: index[parentID]![level]!) : getUnorderedListStyle(
-                    level: level
-                )
+                let style = ordered ? getOrderedListStyle(level: level, index: index[parentID]![level]!) : getUnorderedListStyle(level: level)
                 
                 let levelOffset = CGFloat(level) * 24
                 
@@ -753,7 +751,9 @@ class TextEditor: UITextView, UITextViewDelegate {
             let attributedText = NSMutableAttributedString(attributedString: textView.attributedText)
             print(attributedText)
             attributedText.setAttributes(attributes!, range: range!)
+            let selectedRange = textView.selectedRange
             textView.attributedText = attributedText
+            textView.selectedRange = selectedRange
         }
         for blockID in toUpdate {
             self.updateDocument(blockID: blockID)
@@ -1048,7 +1048,11 @@ class TextEditor: UITextView, UITextViewDelegate {
                 attributes = self.getDefaultAttribute()
             }
             
-            let blockID = attributes[.blockID] as! UUID
+            let blockID = attributes[.blockID] as? UUID
+            guard let blockID = blockID else {
+                // probably using input method
+                return true
+            }
             let blockType = attributes[.blockType] as! String
             
             if text == "\n" {
